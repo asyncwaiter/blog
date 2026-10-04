@@ -6,12 +6,12 @@ export const SiteConfig = {
   url: isDev ? 'http://localhost:3000' : 'https://asyncwaiter.com',
   pathPrefix: '/',
   title: 'asyncwaiter',
-  subtitle: 'If you do not learn to fail, You will fail to learn.',
+  subtitle: 'Fail daily. Learn daily.',
   copyright: 'asyncwaiter © All rights reserved.',
   disqusShortname: '',
   postsPerPage: 5,
   // 자신의 GA4 측정 ID(G-...)를 넣으면 켜진다. 비어 있으면 gtag를 아예 싣지 않는다.
-  googleAnalyticsId: '',
+  googleAnalyticsId: 'G-95FZE9FYFJ',
   useKatex: false,
   menu: [
     {
@@ -33,7 +33,7 @@ export const SiteConfig = {
   ],
   author: {
     name: 'asyncwaiter',
-    photo: '/profile.jpeg',
+    photo: '/profile.jpg',
     bio: 'frontend engineer',
     contacts: {
       email: 'asyncwaiter@gmail.com',

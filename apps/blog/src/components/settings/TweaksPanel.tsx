@@ -13,7 +13,7 @@ const ACCENTS: {
   gradient: [string, string, string, string]
 }[] = [
   {
-    name: 'default',
+    name: 'violet',
     label: 'violet',
     gradient: ['#818cf8', '#a78bfa', '#f472b6', '#fbbf24'],
   },
@@ -38,6 +38,9 @@ const ACCENTS: {
     gradient: ['#38bdf8', '#a78bfa', '#34d399', '#f472b6'],
   },
 ]
+// styles/theme.css 의 기본 --primary 값과 같은 팔레트여야 한다. 이 값이 어긋나면
+// 쿠키가 없는 첫 방문에서 하이드레이션 전후로 강조색이 바뀐다.
+const DEFAULT_ACCENT = 'emerald'
 const THEMES = [
   {
     key: 'light',
@@ -73,7 +76,7 @@ interface Props {
 export default function TweaksPanel({open, onClose}: Props) {
   const {theme, setTheme} = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [accent, setAccent] = useState<string>('default')
+  const [accent, setAccent] = useState<string>(DEFAULT_ACCENT)
   const [grain, setGrain] = useState<boolean>(true)
   const [minimal, setMinimal] = useState<boolean>(false)
   const [tilt, setTilt] = useState<number>(8)
@@ -85,7 +88,7 @@ export default function TweaksPanel({open, onClose}: Props) {
       if (document.visibilityState === 'hidden') {
         return
       }
-      setAccent(getCookie('tw-accent') || 'default')
+      setAccent(getCookie('tw-accent') || DEFAULT_ACCENT)
       setGrain(getCookie('tw-grain') !== 'false')
       setMinimal(getCookie('tw-minimal') === 'true')
       const t = Number(getCookie('tw-tilt') || '8')

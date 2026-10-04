@@ -20,7 +20,7 @@ export function AboutPageView({locale}: {locale: Locale}) {
       <AboutTabs active="about" locale={locale} />
 
       <div className={stylex.props(sx.div).className}>
-        <AboutIntro locale={locale} />
+        <AboutIntro />
       </div>
     </div>
   )

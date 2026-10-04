@@ -3,10 +3,10 @@ import Link from 'next/link'
 import * as resumeStyles from '@/components/about/Resume.styles'
 import type {Locale} from '@/utils/postPaths'
 
-import {openSourceProjects} from './openSourceProjects'
 import {ProjectTags} from './ProjectTags'
 import {resumeContent} from './resumeContent'
 import type {ResumeContent} from './resumeContent'
+import {sideProjects} from './sideProjects'
 
 function SectionHeading({
   id,
@@ -188,61 +188,15 @@ export function Resume({locale = 'ko'}: {locale?: Locale}) {
           </section>
 
           <section
-            id="publications"
+            id="projects"
             className={`resume-section ${resumeStyles.resume_section}`}
-            aria-labelledby="publications-title"
+            aria-labelledby="projects-title"
           >
-            <SectionHeading id="publications" heading={c.publications} />
-            <ul className={`resume-books ${resumeStyles.resume_books}`}>
-              {c.publications.books.map((book) => (
-                <li key={book.href}>
-                  <a
-                    className={`resume-book ${resumeStyles.resume_book} ${resumeStyles.resume_link_hover}`}
-                    href={book.href}
-                  >
-                    <span
-                      className={`resume-bookRole ${resumeStyles.resume_bookRole}`}
-                    >
-                      {book.role}
-                    </span>
-                    <h3 className={resumeStyles.element_h3}>{book.title}</h3>
-                    <p className={resumeStyles.resume_book_p}>{book.subject}</p>
-                    <span
-                      className={`resume-bookLink ${resumeStyles.resume_bookLink}`}
-                    >
-                      {c.publications.publisherLink}{' '}
-                      <span aria-hidden="true">↗</span>
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-            <p className={`resume-writing ${resumeStyles.resume_writing}`}>
-              <span className={`resume-eyebrow ${resumeStyles.resume_eyebrow}`}>
-                {c.publications.writing.eyebrow}
-              </span>
-              <Link
-                href={c.publications.writing.href}
-                className={resumeStyles.resume_writing_link}
-              >
-                {c.publications.writing.title} <span aria-hidden="true">↗</span>
-              </Link>
-              <span className={resumeStyles.resume_writing_span}>
-                {c.publications.writing.note}
-              </span>
-            </p>
-          </section>
-
-          <section
-            id="open-source"
-            className={`resume-section ${resumeStyles.resume_section}`}
-            aria-labelledby="open-source-title"
-          >
-            <SectionHeading id="open-source" heading={c.openSource} />
+            <SectionHeading id="projects" heading={c.projects} />
             <ul className="resume-entries">
-              {openSourceProjects.map((project) => (
+              {sideProjects.map((project) => (
                 <li
-                  key={project.href}
+                  key={project.name}
                   className={resumeStyles.resume_entries_li}
                 >
                   <span
@@ -252,12 +206,16 @@ export function Resume({locale = 'ko'}: {locale?: Locale}) {
                   </span>
                   <div>
                     <h3 className={resumeStyles.element_h3}>
-                      <a
-                        href={project.href}
-                        className={resumeStyles.resume_link_hover}
-                      >
-                        {project.name} <span aria-hidden="true">↗</span>
-                      </a>
+                      {project.href ? (
+                        <a
+                          href={project.href}
+                          className={resumeStyles.resume_link_hover}
+                        >
+                          {project.name} <span aria-hidden="true">↗</span>
+                        </a>
+                      ) : (
+                        project.name
+                      )}
                     </h3>
                     <p className={resumeStyles.resume_entries_p}>
                       {project.description[locale]}
@@ -285,6 +243,15 @@ export function Resume({locale = 'ko'}: {locale?: Locale}) {
           >
             <SectionHeading id="education" heading={c.education} />
             <EntryList entries={c.education.entries} />
+          </section>
+
+          <section
+            id="certifications"
+            className={`resume-section ${resumeStyles.resume_section}`}
+            aria-labelledby="certifications-title"
+          >
+            <SectionHeading id="certifications" heading={c.certifications} />
+            <EntryList entries={c.certifications.entries} />
           </section>
         </div>
       </div>

@@ -65,14 +65,13 @@ const Hero = memo(function HeroBase({
             LIVE · SEOUL · {YEAR}
           </div>
           <h1 ref={titleRef} className={`hero-title ${heroStyles.hero_title}`}>
-            <span className={`ln ${heroStyles.ln}`}>GRIND.</span>
             <span className={`ln ${heroStyles.ln}`}>
-              <span className={`accent ${heroStyles.accent}`}>LEARN</span>
-              <span className={`stroke ${heroStyles.stroke}`}>,</span>
+              <span className={`accent ${heroStyles.accent}`}>FAIL</span>
+              {' DAILY.'}
             </span>
             <span className={`ln ${heroStyles.ln}`}>
-              REPEAT
-              <span className={`accent ${heroStyles.accent}`}>.</span>
+              <span className={`accent ${heroStyles.accent}`}>LEARN</span>
+              {' DAILY.'}
             </span>
           </h1>
           <div className={`hero-sub ${heroStyles.hero_sub}`}>

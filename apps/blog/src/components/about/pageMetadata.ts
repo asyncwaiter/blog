@@ -8,15 +8,15 @@ const pages = {
   about: {
     title: 'About',
     description: {
-      ko: '프론트엔드 엔지니어 yceffort. 웹의 동작 원리와 성능, 개발 도구, AI 시대의 판단과 학습을 탐구하며 글과 책, 오픈소스로 경험을 나눕니다.',
-      en: 'yceffort, a frontend engineer who explores how the web works, performance, developer tools, and judgment and learning in the age of AI, and shares it through writing, books, and open source.',
+      ko: '프론트엔드 엔지니어 이수진. 계측과 렌더링, 번들 경계처럼 추상화 아래로 내려가야 설명되는 문제를 측정하고 기록합니다.',
+      en: 'Soojin Lee, a frontend engineer who measures and writes about problems that only make sense below the abstraction: instrumentation, rendering, and bundle boundaries.',
     },
   },
   resume: {
     title: 'Resume',
     description: {
-      ko: '프론트엔드 엔지니어 yceffort의 경력과 기여. 서비스 개발과 운영, 팀의 공통 개발 기반 구축, 저술·번역과 오픈소스 활동을 소개합니다.',
-      en: 'Career and contributions of frontend engineer yceffort: building and running services, shared foundations for teams, books, translation, and open source.',
+      ko: '프론트엔드 엔지니어 이수진의 경력과 기여. 계측 데이터 복구, 번들 경계 재설계, 렌더링 성능 개선과 사이드 프로젝트를 소개합니다.',
+      en: 'Career and contributions of frontend engineer Soojin Lee: recovering broken analytics, redrawing bundle boundaries, improving rendering performance, and side projects.',
     },
   },
 }

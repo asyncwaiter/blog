@@ -76,7 +76,7 @@ const styles = stylex.create({
   },
   page_sub: {
     '@layer site': {
-      maxWidth: '540px',
+      maxWidth: '570px',
       fontSize: '15px',
       lineHeight: '1.6',
       color: 'var(--ink-2)',

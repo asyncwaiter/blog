@@ -12,11 +12,11 @@ import {useLocale} from '@/hooks/useLocale'
 const intro = {
   ko: {
     eyebrow: 'FRONTEND ENGINEER · SEOUL',
-    sub: '웹이 동작하는 원리를 파고들고, 직접 만들고 측정한 경험을 글과 도구로 나눕니다. 요즘은 AI와 함께 일하는 개발자의 판단과 학습을 고민합니다.',
+    sub: '답을 바로 찾지 않는 습관을 기르는 중입니다. 먼저 왜일지 생각해 본 다음에 찾아보려고 합니다. 이 블로그는 그 기록이며 서툴더라도 제 생각으로 쓰고 싶어서, 글은 AI 없이 직접 씁니다.',
   },
   en: {
     eyebrow: 'FRONTEND ENGINEER IN SEOUL',
-    sub: 'I dig into how the web works and share what I build and measure through writing and tools. These days I think about how developers who work with AI build judgment and learn.',
+    sub: 'I am building the habit of not looking up the answer right away. I try to think about why first, and only then go and check. This blog is that record. I write the posts myself, without AI, because I would rather they be my own thinking even when it comes out clumsy.',
   },
 }
 

@@ -82,7 +82,10 @@ const styles = stylex.create({
   ln: {
     '@layer site': {
       position: 'relative',
-      display: 'inline-block',
+      // 한 줄에 두 단어가 들어가므로 블록으로 고정한다. inline-block이면 폭에
+      // 따라 줄이 나란히 붙거나 단어 사이에서 끊긴다.
+      display: 'block',
+      whiteSpace: 'nowrap',
       transition: 'transform 120ms ease-out',
       willChange: 'transform',
     },
@@ -105,13 +108,6 @@ const styles = stylex.create({
       animationDirection: 'normal',
       animationFillMode: 'none',
       animationPlayState: 'running',
-    },
-  },
-  stroke: {
-    '@layer site': {
-      marginLeft: '0.02em',
-      fontWeight: '700',
-      color: 'var(--ink-4)',
     },
   },
   hero_sub: {
@@ -164,7 +160,6 @@ export const dot = stylex.props(styles.dot).className!
 export const hero_title = stylex.props(styles.hero_title).className!
 export const ln = stylex.props(styles.ln).className!
 export const accent = stylex.props(styles.accent).className!
-export const stroke = stylex.props(styles.stroke).className!
 export const hero_sub = stylex.props(styles.hero_sub).className!
 export const element_p = stylex.props(styles.element_p).className!
 export const hero_stats = stylex.props(styles.hero_stats).className!

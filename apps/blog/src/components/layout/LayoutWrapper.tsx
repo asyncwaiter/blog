@@ -15,7 +15,7 @@ import {
 import * as headerStyles from '@/components/layout/header.styles'
 import {SiteConfig} from '@/config'
 import {useLocale} from '@/hooks/useLocale'
-import profile from '@/public/profile.jpeg'
+import profile from '@/public/profile.jpg'
 import {skipLink} from '@/styles/accessibility.styles'
 
 import PushAlertTooltip from '../pwa/PushAlertTooltip'

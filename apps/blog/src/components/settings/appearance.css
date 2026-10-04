@@ -1,9 +1,17 @@
-/* User appearance preferences on the document. */
+/* User appearance preferences on the document.
+   emerald is the default palette and lives in styles/theme.css, so it needs no
+   rule here. The others override it; violet keeps separate light and dark
+   values, which is why it is split across two rules. */
 @layer preferences {
-  body[data-accent='emerald'] {
-    --primary-2: #38bdf8;
-    --primary-3: #fbbf24;
-    --primary: #34d399;
+  body[data-accent='violet'] {
+    --primary-2: #a78bfa;
+    --primary-3: #ec4899;
+    --primary: #6366f1;
+  }
+  html.dark body[data-accent='violet'] {
+    --primary-2: #a78bfa;
+    --primary-3: #f472b6;
+    --primary: #818cf8;
   }
   body[data-accent='cyan'] {
     --primary-2: #a78bfa;

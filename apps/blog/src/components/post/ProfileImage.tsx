@@ -2,7 +2,7 @@ import * as stylex from '@stylexjs/stylex'
 import Image from 'next/image'
 import {ViewTransition} from 'react'
 
-import profile from '@/public/profile.jpeg'
+import profile from '@/public/profile.jpg'
 const sx = stylex.create({
   size32: {
     '@layer utilities': {
