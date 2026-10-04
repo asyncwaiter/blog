@@ -6,7 +6,7 @@ export const SiteConfig = {
   url: isDev ? 'http://localhost:3000' : 'https://asyncwaiter.com',
   pathPrefix: '/',
   title: 'asyncwaiter',
-  subtitle: 'Fail daily. Learn daily.',
+  subtitle: 'Fail more. Learn more.',
   copyright: 'asyncwaiter © All rights reserved.',
   disqusShortname: '',
   postsPerPage: 5,

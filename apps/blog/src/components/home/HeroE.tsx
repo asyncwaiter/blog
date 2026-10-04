@@ -67,11 +67,11 @@ const Hero = memo(function HeroBase({
           <h1 ref={titleRef} className={`hero-title ${heroStyles.hero_title}`}>
             <span className={`ln ${heroStyles.ln}`}>
               <span className={`accent ${heroStyles.accent}`}>FAIL</span>
-              {' DAILY.'}
+              {' MORE.'}
             </span>
             <span className={`ln ${heroStyles.ln}`}>
               <span className={`accent ${heroStyles.accent}`}>LEARN</span>
-              {' DAILY.'}
+              {' MORE.'}
             </span>
           </h1>
           <div className={`hero-sub ${heroStyles.hero_sub}`}>
