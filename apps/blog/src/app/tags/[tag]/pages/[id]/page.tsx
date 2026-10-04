@@ -2,6 +2,7 @@ import {permanentRedirect} from 'next/navigation'
 
 import ListLayout from '@/components/post/ListLayout'
 import PageNumber from '@/components/post/PageNumber'
+import {SiteConfig} from '@/config'
 import {DEFAULT_NUMBER_OF_POSTS} from '@/constants'
 import {getAllPosts, getAllTagsFromPosts} from '@/utils/Post'
 
@@ -15,10 +16,10 @@ export async function generateMetadata(props: {
   return {
     title: `${tag}: Page ${id}`,
     alternates: {
-      canonical: `https://yceffort.kr/tags/${encodeURIComponent(tag)}/pages/${id}`,
+      canonical: `${SiteConfig.url}/tags/${encodeURIComponent(tag)}/pages/${id}`,
     },
     openGraph: {
-      url: `https://yceffort.kr/tags/${encodeURIComponent(tag)}/pages/${id}`,
+      url: `${SiteConfig.url}/tags/${encodeURIComponent(tag)}/pages/${id}`,
     },
   }
 }

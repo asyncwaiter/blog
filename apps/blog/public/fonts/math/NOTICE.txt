@@ -7,7 +7,7 @@ commit d4a64feff32bf2ff45bf09823192e4a77448a03a).
 
 LibertinusMath-Regular.woff2 in this directory is a SUBSET of the original font.
 It keeps only the glyphs for the code points listed in unicodes.txt (the characters
-used by formulas on yceffort.kr, including the browser's italic mapping of single-letter
+used by formulas on asyncwaiter.com, including the browser's italic mapping of single-letter
 identifiers) together with the MATH table, the stretchy glyph variants and assemblies
 for those glyphs, and all OpenType layout features.
 

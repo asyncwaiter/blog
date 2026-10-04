@@ -1,7 +1,10 @@
 import type {MetadataRoute} from 'next'
 
+import {SiteConfig} from '@/config'
 import {getAllPosts, getAllTagsFromPosts} from '@/utils/Post'
 import {getAllSeries} from '@/utils/Series'
+
+const SITE = SiteConfig.url
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [posts, enPosts, tags, series] = await Promise.all([
@@ -15,56 +18,56 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     {
-      url: 'https://yceffort.kr',
+      url: SITE,
       lastModified: new Date(),
     },
     ...['about', 'resume'].flatMap((page) =>
       ['', '/en'].map((prefix) => ({
-        url: `https://yceffort.kr${prefix}/${page}`,
+        url: `${SITE}${prefix}/${page}`,
         lastModified: new Date(),
         alternates: {
           languages: {
-            ko: `https://yceffort.kr/${page}`,
-            en: `https://yceffort.kr/en/${page}`,
+            ko: `${SITE}/${page}`,
+            en: `${SITE}/en/${page}`,
           },
         },
       })),
     ),
     {
-      url: 'https://yceffort.kr/archive',
+      url: `${SITE}/archive`,
       lastModified: new Date(),
     },
     ...posts.map((post) => ({
-      url: `https://yceffort.kr/${post.fields.slug}`,
+      url: `${SITE}/${post.fields.slug}`,
       lastModified: new Date(post.frontMatter.date),
       ...(enSlugs.has(post.fields.slug) && {
         alternates: {
           languages: {
-            ko: `https://yceffort.kr/${post.fields.slug}`,
-            en: `https://yceffort.kr/en/${post.fields.slug}`,
+            ko: `${SITE}/${post.fields.slug}`,
+            en: `${SITE}/en/${post.fields.slug}`,
           },
         },
       }),
     })),
     ...enPosts.map((post) => ({
-      url: `https://yceffort.kr/en/${post.fields.slug}`,
+      url: `${SITE}/en/${post.fields.slug}`,
       lastModified: new Date(post.frontMatter.date),
       alternates: {
         languages: {
-          ko: `https://yceffort.kr/${post.fields.slug}`,
-          en: `https://yceffort.kr/en/${post.fields.slug}`,
+          ko: `${SITE}/${post.fields.slug}`,
+          en: `${SITE}/en/${post.fields.slug}`,
         },
       },
     })),
     ...tags.map(({tag}) => ({
-      url: `https://yceffort.kr/tags/${tag}`,
+      url: `${SITE}/tags/${tag}`,
     })),
     {
-      url: 'https://yceffort.kr/series',
+      url: `${SITE}/series`,
       lastModified: new Date(),
     },
     ...series.map((s) => ({
-      url: `https://yceffort.kr/series/${s.slug}`,
+      url: `${SITE}/series/${s.slug}`,
       lastModified: new Date(),
     })),
   ]

@@ -411,13 +411,13 @@ self.addEventListener('push', (event) => {
     return
   }
   event.waitUntil(
-    self.registration.showNotification(payload.title || 'yceffort', {
+    self.registration.showNotification(payload.title || 'asyncwaiter', {
       body: payload.body || '',
       icon: '/favicon/web-app-manifest-192x192.png',
       badge: '/favicon/favicon-96x96.png',
       data: {url: payload.url || '/'},
       // 같은 글의 알림이 중복으로 오면 하나로 병합한다
-      tag: payload.url || 'yceffort',
+      tag: payload.url || 'asyncwaiter',
     }),
   )
 })

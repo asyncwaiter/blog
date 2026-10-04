@@ -2,6 +2,7 @@ import * as stylex from '@stylexjs/stylex'
 import type {Metadata} from 'next'
 
 import * as ambientStyles from '@/components/layout/ambient.styles'
+import {SiteConfig} from '@/config'
 
 const sx = stylex.create({
   div: {
@@ -76,7 +77,7 @@ const sx = stylex.create({
   },
 })
 export const metadata: Metadata = {
-  title: 'Offline - yceffort',
+  title: `Offline - ${SiteConfig.title}`,
 }
 export default function OfflinePage() {
   return (

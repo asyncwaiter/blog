@@ -1,23 +1,20 @@
 {
-  "name": "yceffort-monorepo",
+  "name": "asyncwaiter-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "yceffort blog and research monorepo",
+  "description": "asyncwaiter blog monorepo",
   "repository": {
-    "url": "https://github.com/yceffort/yceffort-blog-v2",
+    "url": "https://github.com/asyncwaiter/blog",
     "type": "git"
   },
   "license": "MIT",
-  "author": "yceffort <root@yceffort.kr>",
+  "author": "asyncwaiter <asyncwaiter@gmail.com>",
   "type": "module",
   "scripts": {
     "dev": "pnpm --parallel -r dev",
     "dev:blog": "pnpm --filter blog dev",
-    "dev:research": "pnpm --filter research dev",
-    "preview:research": "pnpm --filter research preview:offline",
     "build": "pnpm -r build",
     "build:blog": "pnpm --filter blog build",
-    "build:research": "pnpm --filter research build",
     "lint": "oxlint --type-aware && rust-markdownlint && node apps/blog/scripts/check-markdown.mjs --quiet",
     "lint:fix": "oxlint --type-aware --fix && rust-markdownlint --fix",
     "prettier": "oxfmt --check .",

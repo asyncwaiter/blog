@@ -22,8 +22,6 @@ export interface FrontMatter {
   featured?: boolean
   thumbnail?: string
   art?: ArtSpec
-  /** 대응하는 research 발표 슬라이드의 slug (research.yceffort.kr/slides/{slide}) */
-  slide?: string
 }
 
 export interface Post {

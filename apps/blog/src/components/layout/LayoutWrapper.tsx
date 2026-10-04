@@ -95,7 +95,7 @@ function HeaderLogo() {
   return (
     <Link
       href={pathPrefix || '/'}
-      aria-label="yceffort's blog"
+      aria-label={`${SiteConfig.author.name}'s blog`}
       className={stylex.props(sx.link).className}
     >
       <div className={`logo-ring ${headerStyles.logo_ring}`} aria-hidden="true">
@@ -110,7 +110,9 @@ function HeaderLogo() {
           />
         </span>
       </div>
-      <div className={`logo-name ${headerStyles.logo_name}`}>yceffort</div>
+      <div className={`logo-name ${headerStyles.logo_name}`}>
+        {SiteConfig.title}
+      </div>
     </Link>
   )
 }
@@ -297,7 +299,7 @@ function Header({enSlugs}: {enSlugs: string[]}) {
                 <PushAlertTooltip onOpen={() => setTweaksOpen(true)} />
               </span>
               <a
-                href="https://github.com/yceffort"
+                href={SiteConfig.author.contacts.github}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`icon-btn ${headerStyles.icon_btn}`}

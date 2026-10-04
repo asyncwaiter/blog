@@ -1,10 +1,10 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://yceffort.kr/sitemap.xml
-Sitemap: https://yceffort.kr/feed.xml
+Sitemap: https://asyncwaiter.com/sitemap.xml
+Sitemap: https://asyncwaiter.com/feed.xml
 
 # LLM-friendly resources
-# https://yceffort.kr/llms.txt
-# https://yceffort.kr/llms-full.txt
-# https://yceffort.kr/en/llms-full.txt
+# https://asyncwaiter.com/llms.txt
+# https://asyncwaiter.com/llms-full.txt
+# https://asyncwaiter.com/en/llms-full.txt

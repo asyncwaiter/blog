@@ -48,11 +48,6 @@ export default function Footer() {
             href={SiteConfig.author.contacts.github}
             size={6}
           />
-          <SocialIcon
-            kind="twitter"
-            href={SiteConfig.author.contacts.twitter}
-            size={6}
-          />
         </div>
         <div className={`compact-stack ${stylex.props(sx.div3).className}`}>
           <div>{SiteConfig.author.name}</div>

@@ -1,6 +1,7 @@
 import {parseTitleEmphasis} from '@yceffort/shared/utils'
 import {ImageResponse} from 'next/og'
 
+import {SiteConfig} from '@/config'
 import {unblockSvgLoader} from '@/utils/ogSharpUnblock'
 
 import {LAYOUTS, LAYOUT_BY_NAME, HEIGHT, INK, WIDTH, alpha} from './layouts'
@@ -158,7 +159,7 @@ function toWords(title: string): Frag[][] {
 export async function GET(request: Request) {
   unblockSvgLoader()
   const {searchParams} = new URL(request.url)
-  const slug = searchParams.get('slug') ?? 'yceffort'
+  const slug = searchParams.get('slug') ?? SiteConfig.title
   const title = searchParams.get('title')?.slice(0, 200) || null
   const tag = searchParams.get('tag')
   const layoutName = searchParams.get('layout')

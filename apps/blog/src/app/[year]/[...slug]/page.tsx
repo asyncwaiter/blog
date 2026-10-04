@@ -148,7 +148,7 @@ async function PostBody({year, slug}: {year: string; slug: string[]}) {
     return null
   }
   const {
-    frontMatter: {title, tags, date, description, series, published, slide},
+    frontMatter: {title, tags, date, description, series, published},
     body,
     path,
     fields: {slug: postSlug},
@@ -160,7 +160,7 @@ async function PostBody({year, slug}: {year: string; slug: string[]}) {
   const updatedAt = format(new Date(date), 'yyyy-MM-dd')
   const transitionName = `post-${postSlug.replace(/\//g, '-')}`
   const plainTitle = stripTitleEmphasis(title)
-  const link = `https://github.com/yceffort/yceffort-blog-v2/issues/new?labels=%F0%9F%92%AC%20Discussion&title=[Discussion] issue on ${plainTitle}&assignees=yceffort&body=${SiteConfig.url}/${postSlug}`
+  const link = `https://github.com/asyncwaiter/blog/issues/new?labels=%F0%9F%92%AC%20Discussion&title=[Discussion] issue on ${plainTitle}&assignees=asyncwaiter&body=${SiteConfig.url}/${postSlug}`
   const thumbnail = post.frontMatter.thumbnail
   const ogImageUrl = buildOgImageUrl({
     title: plainTitle,
@@ -314,20 +314,6 @@ async function PostBody({year, slug}: {year: string; slug: string[]}) {
           />
         )}
 
-        {slide && (
-          <aside className="post-slide-note">
-            <p>이 글은 발표 슬라이드로도 정리되어 있습니다.</p>
-            <a
-              href={`https://research.yceffort.kr/slides/${slide}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="post-slide-note-link"
-            >
-              슬라이드로 보기 →
-            </a>
-          </aside>
-        )}
-
         <PostArticle body={body} path={path} />
 
         {series && seriesPosts.length > 1 && (
@@ -340,7 +326,7 @@ async function PostBody({year, slug}: {year: string; slug: string[]}) {
 
         <footer className="post-footer">
           <p className="post-author-note">
-            <Link href="/about">yceffort</Link>
+            <Link href="/about">{SiteConfig.author.name}</Link>
             {' — 프론트엔드 엔지니어입니다.'}
           </p>
           <Link href="/">&larr; Back to the blog</Link>

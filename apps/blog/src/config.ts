@@ -3,14 +3,15 @@ import {getContactHref} from '@yceffort/shared/utils'
 const isDev = process.env.NODE_ENV === 'development'
 
 export const SiteConfig = {
-  url: isDev ? 'http://localhost:3000' : 'https://yceffort.kr',
+  url: isDev ? 'http://localhost:3000' : 'https://asyncwaiter.com',
   pathPrefix: '/',
-  title: 'yceffort',
-  subtitle: 'Grind. Learn. Repeat.',
-  copyright: 'yceffort © All rights reserved.',
+  title: 'asyncwaiter',
+  subtitle: 'If you do not learn to fail, You will fail to learn.',
+  copyright: 'asyncwaiter © All rights reserved.',
   disqusShortname: '',
   postsPerPage: 5,
-  googleAnalyticsId: 'G-ND58S24JBX',
+  // 자신의 GA4 측정 ID(G-...)를 넣으면 켜진다. 비어 있으면 gtag를 아예 싣지 않는다.
+  googleAnalyticsId: '',
   useKatex: false,
   menu: [
     {
@@ -29,21 +30,17 @@ export const SiteConfig = {
       label: 'About',
       path: '/about',
     },
-    {
-      label: '🧪 Research',
-      path: isDev ? 'http://localhost:3001' : 'https://research.yceffort.kr',
-    },
   ],
   author: {
-    name: 'yceffort',
+    name: 'asyncwaiter',
     photo: '/profile.jpeg',
     bio: 'frontend engineer',
     contacts: {
-      email: 'root@yceffort.kr',
+      email: 'asyncwaiter@gmail.com',
       facebook: '',
       telegram: '',
-      twitter: getContactHref('twitter', 'yceffort_dev'),
-      github: getContactHref('github', 'yceffort'),
+      twitter: '',
+      github: getContactHref('github', 'asyncwaiter'),
       rss: '',
       linkedin: '',
       instagram: '',

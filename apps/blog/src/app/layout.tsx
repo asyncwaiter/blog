@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   referrer: 'origin-when-cross-origin',
   creator: SiteConfig.author.name,
   publisher: SiteConfig.author.name,
-  metadataBase: new URL('https://yceffort.kr'),
+  metadataBase: new URL(SiteConfig.url),
   formatDetection: {
     email: false,
     address: false,
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: SiteConfig.title,
     description: 'Frontend-focused full stack engineer',
-    url: 'https://yceffort.kr',
+    url: SiteConfig.url,
     siteName: SiteConfig.title,
     images: [
       {

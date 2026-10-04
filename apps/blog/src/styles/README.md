@@ -1,6 +1,6 @@
 # Blog styles
 
-The blog uses StyleX for component UI and CSS for document and generated-content selectors. The research app uses Tailwind.
+The blog uses StyleX for component UI and CSS for document and generated-content selectors.
 
 ## Component styles
 

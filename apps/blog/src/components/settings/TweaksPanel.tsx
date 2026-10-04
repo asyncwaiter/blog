@@ -80,7 +80,7 @@ export default function TweaksPanel({open, onClose}: Props) {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    // research.yceffort.kr 와 쿠키를 공유하므로, 다른 탭에서 바꾼 값을 탭이 다시 보일 때 반영한다.
+    // 설정을 쿠키에 두므로, 다른 탭에서 바꾼 값을 탭이 다시 보일 때 반영한다.
     const syncFromCookie = () => {
       if (document.visibilityState === 'hidden') {
         return

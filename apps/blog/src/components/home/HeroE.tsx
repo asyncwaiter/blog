@@ -3,6 +3,7 @@
 import {memo, useEffect, useRef} from 'react'
 
 import * as heroStyles from '@/components/home/hero.styles'
+import {SiteConfig} from '@/config'
 
 const YEAR = new Date().getFullYear()
 interface HeroProps {
@@ -82,7 +83,7 @@ const Hero = memo(function HeroBase({
                   color: 'var(--ink)',
                 }}
               >
-                yceffort
+                {SiteConfig.author.name}
               </b>
               {
                 ', a frontend engineer taking software apart to see how it works: framework internals, performance, and lessons from production.'

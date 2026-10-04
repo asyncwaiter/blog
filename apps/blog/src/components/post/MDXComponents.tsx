@@ -7,6 +7,10 @@ import CodeBlock from '@/components/post/CodeBlock'
 import ImageZoom from '@/components/post/ImageZoom'
 import LiveDemo from '@/components/post/LiveDemo'
 import Mermaid from '@/components/post/Mermaid'
+import {SiteConfig} from '@/config'
+
+// 본문 링크의 내부/외부 판정 기준. 도메인을 바꾸면 config 한 곳만 고치면 된다.
+const SITE_HOST = new URL(SiteConfig.url).hostname
 
 const sx = stylex.create({
   div: {
@@ -81,8 +85,7 @@ const MdxComponents = {
         </a>
       )
     }
-    const isExternal =
-      /^https?:\/\//.test(href) && !href.includes('yceffort.kr')
+    const isExternal = /^https?:\/\//.test(href) && !href.includes(SITE_HOST)
     if (isExternal) {
       const {className, ...anchorRest} = rest
       return (
