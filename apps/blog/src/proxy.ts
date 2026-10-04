@@ -87,7 +87,9 @@ export function proxy(request: NextRequest) {
     ? getMarkdownPath(pathname, segments, rest)
     : null
 
-  if (pathname === '/' && !markdownPath) {
+  // 언어 자동 전환은 사람에게만 적용한다. 크롤러는 Accept-Language 를 en 으로 보내는
+  // 경우가 많아, 이 분기를 타면 공유 카드가 /en 의 제목과 설명으로 잡힌다.
+  if (pathname === '/' && !markdownPath && !isBot) {
     const localeCookie = request.cookies.get('locale')?.value
 
     if (localeCookie === 'en') {

@@ -1,7 +1,7 @@
 {
   "name": "asyncwaiter",
   "short_name": "asyncwaiter",
-  "description": "Frontend-focused full stack engineer blog",
+  "description": "Frontend engineer blog",
   "id": "/",
   "start_url": "/",
   "scope": "/",

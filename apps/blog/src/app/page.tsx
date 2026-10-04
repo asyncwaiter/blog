@@ -52,7 +52,7 @@ export const metadata: Metadata = {
       {
         url: buildOgImageUrl({
           title: SiteConfig.title,
-          description: `${SiteConfig.subtitle}'s blog`,
+          description: `${SiteConfig.title}'s blog`,
           path: '/',
           type: 'page',
         }),

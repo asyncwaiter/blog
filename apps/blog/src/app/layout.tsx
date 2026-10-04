@@ -48,14 +48,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: SiteConfig.title,
-    description: 'Frontend-focused full stack engineer',
+    description: 'Frontend engineer',
     url: SiteConfig.url,
     siteName: SiteConfig.title,
     images: [
       {
         url: buildOgImageUrl({
           title: SiteConfig.title,
-          description: 'Frontend-focused full stack engineer',
+          description: 'Frontend engineer',
           type: 'page',
         }),
         width: 1200,
@@ -69,11 +69,11 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: SiteConfig.title,
-    description: 'Frontend-focused full stack engineer',
+    description: 'Frontend engineer',
     images: [
       buildOgImageUrl({
         title: SiteConfig.title,
-        description: 'Frontend-focused full stack engineer',
+        description: 'Frontend engineer',
         type: 'page',
       }),
     ],
