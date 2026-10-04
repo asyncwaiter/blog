@@ -32,6 +32,25 @@ const sx = stylex.create({
       position: 'relative',
     },
   },
+  div2: {
+    '@layer utilities': {
+      marginBottom: 'calc(var(--spacing) * 3)',
+      display: 'inline-block',
+      borderRadius: 'var(--radius-md)',
+      backgroundColor: 'var(--color-amber-500)',
+      paddingInline: 'calc(var(--spacing) * 2)',
+      paddingBlock: 'calc(var(--spacing) * 0.5)',
+      fontSize: 'var(--text-xs)',
+      lineHeight: 'var(--blog-leading, var(--text-xs--line-height))',
+      fontWeight: 'var(--font-weight-bold)',
+      color: 'var(--color-white)',
+      textTransform: 'uppercase',
+      '--blog-shadow':
+        '0 1px 3px 0 var(--blog-shadow-color, rgb(0 0 0 / 0.1)), 0 1px 2px -1px var(--blog-shadow-color, rgb(0 0 0 / 0.1))',
+      boxShadow:
+        'var(--blog-inset-shadow), var(--blog-inset-ring-shadow), var(--blog-ring-offset-shadow), var(--blog-ring-shadow), var(--blog-shadow)',
+    },
+  },
 })
 export async function generateMetadata(props: {
   params: Promise<{
@@ -129,7 +148,7 @@ async function EnPostBody({year, slug}: {year: string; slug: string[]}) {
     return null
   }
   const {
-    frontMatter: {title, tags, date, description, series},
+    frontMatter: {title, tags, date, description, series, published},
     body,
     path,
     fields: {slug: postSlug},
@@ -207,51 +226,12 @@ async function EnPostBody({year, slug}: {year: string; slug: string[]}) {
         <section
           className={`post-masthead ${readingProgressStyles.post_masthead}`}
         >
-          <div className="info">
-            <div
-              className={`post-eyebrow ${readingProgressStyles.post_eyebrow}`}
-            >
-              ◆ ESSAY
-            </div>
-            <div className={`post-author ${readingProgressStyles.post_author}`}>
-              <ProfileImage
-                size={40}
-                transitionName={`${transitionName}-avatar`}
-              />
-              <div>
-                <div className={`nm ${readingProgressStyles.nm}`}>
-                  {SiteConfig.author.name}
-                </div>
-                <div className={`sub ${readingProgressStyles.sub}`}>
-                  {updatedAt} · {readingTime} min read
-                </div>
-              </div>
-            </div>
-            {tags && (
-              <ViewTransition name={`${transitionName}-tags`}>
-                <div
-                  className={`post-tags-row ${readingProgressStyles.post_tags_row}`}
-                >
-                  {tags.slice(0, 5).map((tag) => (
-                    <Tag key={tag} text={tag} linked={false} />
-                  ))}
-                </div>
-              </ViewTransition>
-            )}
-            <div className={`post-stats ${readingProgressStyles.post_stats}`}>
-              <div>
-                <b className={readingProgressStyles.element_b}>{readingTime}</b>
-                min read
-              </div>
-              <div>
-                <b className={readingProgressStyles.element_b}>{postYear}</b>
-                year
-              </div>
-              <div>
-                <b className={readingProgressStyles.element_b}>EN</b>
-                translated
-              </div>
-            </div>
+          {!published && (
+            <div className={stylex.props(sx.div2).className}>Draft</div>
+          )}
+          {/* /en 에는 시리즈 목록 라우트가 없어 한국어와 달리 링크를 걸지 않는다 */}
+          <div className={`post-eyebrow ${readingProgressStyles.post_eyebrow}`}>
+            ◆ {series ? `SERIES · ${series}` : 'ESSAY'}
           </div>
           <ViewTransition name={transitionName}>
             <h1 className={`post-title ${readingProgressStyles.post_title}`}>
@@ -266,6 +246,50 @@ async function EnPostBody({year, slug}: {year: string; slug: string[]}) {
               )}
             </h1>
           </ViewTransition>
+          <div
+            className={`post-meta-row ${readingProgressStyles.post_meta_row}`}
+          >
+            <div className={`post-author ${readingProgressStyles.post_author}`}>
+              <ProfileImage
+                size={36}
+                transitionName={`${transitionName}-avatar`}
+              />
+              <div>
+                <div className={`nm ${readingProgressStyles.nm}`}>
+                  {SiteConfig.author.name}
+                </div>
+                <div className={`sub ${readingProgressStyles.sub}`}>
+                  {updatedAt} · {readingTime} min read
+                </div>
+              </div>
+            </div>
+            <div className={`post-stats ${readingProgressStyles.post_stats}`}>
+              <div>
+                <b className={readingProgressStyles.element_b}>{readingTime}</b>
+                min
+              </div>
+              <div>
+                <b className={readingProgressStyles.element_b}>{postYear}</b>
+                year
+              </div>
+              <div>
+                <b className={readingProgressStyles.element_b}>EN</b>
+                translated
+              </div>
+            </div>
+          </div>
+          {/* /en 에는 태그 라우트가 없으므로 링크 없이 표시만 한다 */}
+          {tags && (
+            <ViewTransition name={`${transitionName}-tags`}>
+              <div
+                className={`post-tags-row ${readingProgressStyles.post_tags_row}`}
+              >
+                {tags.slice(0, 5).map((tag) => (
+                  <Tag key={tag} text={tag} linked={false} />
+                ))}
+              </div>
+            </ViewTransition>
+          )}
         </section>
 
         {series && seriesPosts.length > 1 && (
