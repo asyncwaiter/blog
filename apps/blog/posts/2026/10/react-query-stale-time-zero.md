@@ -66,7 +66,7 @@ export default async function Page() {
 }
 ```
 
-SSR에서 `prefetch`를 하고 이를 hydrate했으니 한 번일 것 같다. 그런데 이전 포스팅의 `hydrated-stale` 실험에서, 이 코드를 dev 모드에서 30회 돌렸을 때 요청이 60회 찍히는 것을 확인할 수 있었다. 매 실행마다 `queryFn`이 두 번 호출된 것이다.
+SSR에서 `prefetch`를 하고 이를 hydrate했으니 한 번일 것 같다. 그런데 [이전 포스팅](/2026/10/rendering-boundary-server-functions)의 `hydrated-stale` 실험에서, 이 코드를 dev 모드에서 30회 돌렸을 때 요청이 60회 찍히는 것을 확인할 수 있었다. 매 실행마다 `queryFn`이 두 번 호출된 것이다.
 
 왜 두 번 찍혔을까? 이전 포스팅에서는 두 배의 이유를 `staleTime`이 0이기 때문이라 설명했는데, 이 설명은 옳지 못했다. 그 이유를 React Query의 `staleTime` 내부 코드를 통해 살펴보자.
 
@@ -290,6 +290,6 @@ commitRootWhenReady(
 
 ## 마치며
 
-이렇게 `staleTime`에서 시작해 React의 Suspense 렌더링 동작까지 알아보았다. 이 모든 것들을 제대로 알고 있어야, 지난 글에서 고민했었던 `staleTime`에 대해 제대로 정할 수 있겠구나 싶었다.
+이렇게 `staleTime`에서 시작해 React의 Suspense 렌더링 동작까지 알아보았다. 이 모든 것들을 제대로 알고 있어야, [지난 글](/2026/10/rendering-boundary-server-functions)에서 고민했었던 `staleTime`에 대해 제대로 정할 수 있겠구나 싶었다.
 
 `staleTime`은 그냥 예측으로 정하는 캐싱 시간 정도라 생각했는데, 사실 이건 서버에서 데이터가 오고 나서 화면에 마운트되기까지의 간격을 파악하는 일이었다. 물론 앞선 throttling time PR이나 React Query 최소 `staleTime`에서처럼 완벽한 숫자는 없고 휴리스틱한 숫자겠지만, 지금 내 프로젝트의 번들 크기, 주로 사용되는 기기, 국가 환경에 따라 알맞게 설정한다면 네트워크 요청을 최적화할 수 있는 방법이 되기 때문이다.

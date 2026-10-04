@@ -66,7 +66,7 @@ export default async function Page() {
 }
 ```
 
-It prefetches in SSR and hydrates that, so it feels like the answer should be once. But in the `hydrated-stale` experiment from the previous post, running this code 30 times in dev mode logged 60 requests. `queryFn` was called twice per run.
+It prefetches in SSR and hydrates that, so it feels like the answer should be once. But in the `hydrated-stale` experiment from [the previous post](/en/2026/10/rendering-boundary-server-functions), running this code 30 times in dev mode logged 60 requests. `queryFn` was called twice per run.
 
 Why twice? In the previous post I explained the doubling as `staleTime` being 0, and that explanation was not right. Let us look at React Query's `staleTime` internals to see why.
 
@@ -290,6 +290,6 @@ commitRootWhenReady(
 
 ## Closing
 
-So, starting from `staleTime`, I ended up looking at how React's Suspense rendering works. I came to think you need to know all of this properly before you can set `staleTime` properly, which is what I was wondering about in the last post.
+So, starting from `staleTime`, I ended up looking at how React's Suspense rendering works. I came to think you need to know all of this properly before you can set `staleTime` properly, which is what I was wondering about in [the last post](/en/2026/10/rendering-boundary-server-functions).
 
 I used to think `staleTime` was just a cache duration you guess at, but it is really about understanding the gap between the data arriving from the server and the component mounting on screen. Of course, as with the throttling time PR and React Query's minimum `staleTime`, there is no perfect number and it stays a heuristic. Still, setting it to match my project's bundle size, the devices people actually use, and the country they are in makes it a way to cut network requests.
