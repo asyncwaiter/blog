@@ -2,6 +2,7 @@ import type {MetadataRoute} from 'next'
 
 import {SiteConfig} from '@/config'
 import {getAllPosts, getAllTagsFromPosts} from '@/utils/Post'
+import {toInstant} from '@/utils/postDate'
 import {getAllSeries} from '@/utils/Series'
 
 const SITE = SiteConfig.url
@@ -39,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     ...posts.map((post) => ({
       url: `${SITE}/${post.fields.slug}`,
-      lastModified: new Date(post.frontMatter.date),
+      lastModified: toInstant(post.frontMatter.date),
       ...(enSlugs.has(post.fields.slug) && {
         alternates: {
           languages: {
@@ -51,7 +52,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...enPosts.map((post) => ({
       url: `${SITE}/en/${post.fields.slug}`,
-      lastModified: new Date(post.frontMatter.date),
+      lastModified: toInstant(post.frontMatter.date),
       alternates: {
         languages: {
           ko: `${SITE}/${post.fields.slug}`,
