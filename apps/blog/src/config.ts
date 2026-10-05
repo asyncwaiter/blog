@@ -10,7 +10,6 @@ export const SiteConfig = {
   copyright: 'asyncwaiter © All rights reserved.',
   disqusShortname: '',
   postsPerPage: 5,
-  // 자신의 GA4 측정 ID(G-...)를 넣으면 켜진다. 비어 있으면 gtag를 아예 싣지 않는다.
   googleAnalyticsId: 'G-95FZE9FYFJ',
   useKatex: false,
   menu: [

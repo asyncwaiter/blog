@@ -6,7 +6,6 @@ import type {Locale} from '@/utils/postPaths'
 import {ProjectTags} from './ProjectTags'
 import {resumeContent} from './resumeContent'
 import type {ResumeContent} from './resumeContent'
-import {sideProjects} from './sideProjects'
 
 function SectionHeading({
   id,
@@ -34,7 +33,7 @@ function SectionHeading({
 function EntryList({
   entries,
 }: {
-  entries: ResumeContent['activities']['entries']
+  entries: ResumeContent['education']['entries']
 }) {
   return (
     <ul className="resume-entries">
@@ -194,7 +193,7 @@ export function Resume({locale = 'ko'}: {locale?: Locale}) {
           >
             <SectionHeading id="projects" heading={c.projects} />
             <ul className="resume-entries">
-              {sideProjects.map((project) => (
+              {c.projects.items.map((project) => (
                 <li
                   key={project.name}
                   className={resumeStyles.resume_entries_li}
@@ -202,7 +201,7 @@ export function Resume({locale = 'ko'}: {locale?: Locale}) {
                   <span
                     className={`resume-period ${resumeStyles.resume_period}`}
                   >
-                    {project.category[locale]}
+                    {project.category}
                   </span>
                   <div>
                     <h3 className={resumeStyles.element_h3}>
@@ -218,22 +217,13 @@ export function Resume({locale = 'ko'}: {locale?: Locale}) {
                       )}
                     </h3>
                     <p className={resumeStyles.resume_entries_p}>
-                      {project.description[locale]}
+                      {project.description}
                     </p>
                     <ProjectTags tags={project.tags} locale={locale} />
                   </div>
                 </li>
               ))}
             </ul>
-          </section>
-
-          <section
-            id="activities"
-            className={`resume-section ${resumeStyles.resume_section}`}
-            aria-labelledby="activities-title"
-          >
-            <SectionHeading id="activities" heading={c.activities} />
-            <EntryList entries={c.activities.entries} />
           </section>
 
           <section

@@ -12,11 +12,17 @@ import {useLocale} from '@/hooks/useLocale'
 const intro = {
   ko: {
     eyebrow: 'FRONTEND ENGINEER · SEOUL',
-    sub: '답을 바로 찾지 않는 습관을 기르는 중입니다. 먼저 왜일지 생각해 본 다음에 찾아보려고 합니다. 이 블로그는 그 기록이며 서툴더라도 제 생각으로 쓰고 싶어서, 글은 AI 없이 직접 씁니다.',
+    sub: [
+      '답을 바로 찾지 않는 습관을 기르는 중입니다. 틀리더라도 먼저 왜일지 충분히 고민해보고 찾아봅니다. 직접 틀려봐야 기억에 남기 때문입니다.',
+      '이 블로그는 그 과정을 기록합니다. 서툴더라도 제 생각으로 쓰고 싶어서 글은 AI 없이 직접 작성합니다.',
+    ],
   },
   en: {
     eyebrow: 'FRONTEND ENGINEER IN SEOUL',
-    sub: 'I am building the habit of not looking up the answer right away. I try to think about why first, and only then go and check. This blog is that record. I write the posts myself, without AI, because I would rather they be my own thinking even when it comes out clumsy.',
+    sub: [
+      'I’m working on developing the habit of not jumping straight to the answer. Even if I’m wrong, I first think deeply about why that might be the case before looking for the answer. That’s because I remember things better when I make mistakes myself.',
+      'This blog documents that process. Even if my writing is a bit clumsy, I want to express my own thoughts, so I write these posts myself without using AI.',
+    ],
   },
 }
 
@@ -35,7 +41,11 @@ export function AboutHero() {
           {eyebrow}
         </div>
         <h1 className={aboutStyles.about_title}>{SiteConfig.title}.</h1>
-        <p className={`page-sub ${tagsStyles.page_sub}`}>{sub}</p>
+        {sub.map((paragraph) => (
+          <p key={paragraph} className={`page-sub ${tagsStyles.page_sub}`}>
+            {paragraph}
+          </p>
+        ))}
         <div className={`about-socials ${aboutStyles.about_socials}`}>
           <a
             href={`mailto:${SiteConfig.author.contacts.email}`}

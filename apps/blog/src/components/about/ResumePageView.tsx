@@ -9,12 +9,12 @@ import type {Locale} from '@/utils/postPaths'
 
 const header = {
   ko: {
-    eyebrow: 'FRONTEND ENGINEER · WRITER',
-    note: '...',
+    eyebrow: 'FRONTEND ENGINEER',
+    note: '제 말로 설명하고 글로 쓸 수 있을 때까지 문제를 파고 듭니다.',
   },
   en: {
-    eyebrow: 'FRONTEND ENGINEER AND WRITER',
-    note: '...',
+    eyebrow: 'FRONTEND ENGINEER',
+    note: 'I dig into a problem until I can explain it in my own words and write it down.',
   },
 }
 
