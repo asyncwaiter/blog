@@ -66,7 +66,7 @@ export default async function Page() {
 }
 ```
 
-SSR에서 `prefetch`를 하고 이를 hydrate했으니 한 번일 것 같다. 그런데 [이전 포스팅](/2026/10/rendering-boundary-server-functions)의 `hydrated-stale` 실험에서, 이 코드를 dev 모드에서 30회 돌렸을 때 요청이 60회 찍히는 것을 확인할 수 있었다. 매 실행마다 `queryFn`이 두 번 호출된 것이다.
+SSR에서 prefetch를 하고 이를 hydrate했으니 한 번일 것 같다. 그런데 [이전 포스팅](/2026/10/rendering-boundary-server-functions)의 `hydrated-stale` 실험에서, 이 코드를 dev 모드에서 30회 돌렸을 때 요청이 60회 찍히는 것을 확인할 수 있었다. 매 실행마다 `queryFn`이 두 번 호출된 것이다.
 
 왜 두 번 찍혔을까? 이전 포스팅에서는 두 배의 이유를 `staleTime`이 0이기 때문이라 설명했는데, 이 설명은 옳지 못했다. Suspense 모드에서 `staleTime`은 0이 아니라 최소 1,000ms, 1초로 설정된다. 이를 React Query 내부 코드로 확인해보자.
 
@@ -104,7 +104,9 @@ export const ensureSuspenseTimers = (
 2. 이 시간 차는 어디서, 어떻게 측정되고 있는가?
 3. 내 실험 환경에서 이 1초를 만든 원인은 무엇인가?
 
-첫 번째부터 알아보자. 리액트쿼리팀은 Suspense 모드 내에서 왜 `staleTime`을 최소 1초로 설정했을까? 사실 왜 최소값이 필요한지는 코드 주석에 적혀 있었다. suspend 뒤 리마운트될 때의 불필요한 refetch를 막기 위해서. 다만 왜 하필 1초인지는 어디에도 적혀 있지 않았다. 이 부분은 뒤에서 Suspense의 throttle을 근거로 추측해볼 예정이다.
+## 왜 최소값이 필요했을까
+
+첫 번째부터 알아보자. 리액트쿼리팀은 Suspense 모드 내에서 왜 `staleTime`을 최소 1초로 설정했을까? 사실 왜 최소값이 필요한지는 코드 주석에 적혀 있었다. 위 코드의 주석을 보면 suspend 뒤 리마운트될 때의 불필요한 refetch를 막기 위해서라고 한다. 다만 왜 하필 1초인지는 어디에도 적혀 있지 않았다. 이 부분은 뒤에서 Suspense의 throttle을 근거로 추측해볼 예정이다.
 
 주석이 말하는 상황을 다시 설명해보자면 이렇다. `useSuspenseQuery`는 렌더 중에 fetch를 시작하고 suspend된다. 이때 기존 render는 버려지고, 그 안에서 만들어진 observer도 구독 한 번 못 해보고 함께 사라진다. 요청은 그동안 캐시에서 끝나고, 데이터가 도착한 뒤 재시도 때 새 observer가 만들어져 처음 구독한다. 기존 `useQuery`와는 다르게 구독 시점에 이미 데이터가 도착해 있다는 것이다. stale 판정은 이 구독 시점에 이뤄지는데, `staleTime`이 0이라면 데이터가 도착한 지 시간이 0보다는 지나 있을 테니 무조건 stale 판정이 되고 네트워크 재호출이 발생한다. 최소값은 이를 막기 위한 것이다.
 
@@ -133,7 +135,7 @@ export const ensureSuspenseTimers = (
       }
 ```
 
-출처: [`query-core/src/query.ts#L590-L609`](https://github.com/TanStack/query/blob/fe053bf8e947cd869db91e10372bad3c41bc7b77/packages/query-core/src/query.ts#L590-L609)
+출처: [query-core/src/query.ts#L590-L609](https://github.com/TanStack/query/blob/fe053bf8e947cd869db91e10372bad3c41bc7b77/packages/query-core/src/query.ts#L590-L609)
 
 코드를 보면 다시 렌더가 된다해도 몇 번이고 재요청하지 않도록, `retryer`로 이미 요청이 갔는지 확인하고 그 요청을 다시 돌려주고 있다. 이전 렌더가 버려지더라도 새로운 렌더가 그 요청을 이어받도록 하는 것이다. 그리고 이 요청이 끝나면 쿼리 데이터가 바뀌게 되고, Promise가 reolve되어 React에서 retry(재시도)를 시작한다. 여기서 재시도는 리렌더와 다르고, 한 번도 커밋된 적이 없다면 사실상 처음부터 다시 마운트하는 것과 같다. 표로 한 번 살펴보자.
 
@@ -146,7 +148,50 @@ export const ensureSuspenseTimers = (
 | 이전 effect의 cleanup  | 의존성이 바뀐 effect만                             | 전부 실행됨                                   | 실행할 것이 없음 (effect가 돈 적 없음)                         |
 | React Query의 observer | 같은 observer 유지                                 | 기존 observer는 구독 해제, 새 observer가 구독 | 첫 observer는 구독한 적 없이 사라지고, 새 observer가 처음 구독 |
 
-한 번 커밋된 뒤 다시 suspend되면 state는 유지된다. 이건 실험을 돌려서 console이 찍히는 것을 보는게 훨씬 직관적이었다. 실험은 따로 [별도의 레포](https://github.com/asyncwaiter/blog-experiment/blob/main/src/experiments/rerender-remount-retry/index.tsx)에 올려두었다.
+한 번 커밋된 뒤 다시 suspend되면 state는 유지된다. 이건 실험을 돌려서 console이 찍히는 것을 보는게 훨씬 직관적이었다. 실험은 따로 [별도의 레포](https://github.com/asyncwaiter/blog-experiment/blob/main/src/experiments/rerender-remount-retry/index.tsx)에 올려두었다. 그런데 또 궁금해지는게 있었다. 이렇게 렌더 중에도 하나의 요청으로 만들어 순수성을 지키는게 가능했으면 왜 `useQuery`에서는 이런 옵션을 주지 않은걸까 싶어 찾아봤다. 그랬더니 실제로 [해당 기능을 지원](https://github.com/TanStack/query/pull/7988/changes)하는 부분이 있었으나 2026년 8월에 [이를 없애는 PR](https://github.com/TanStack/query/pull/11221)이 올라왔다. 기존 논점에서 조금 벗어난 감이 있으나, 이를 이해하고 넘어가는게 앞으로 라이브러리 사용에 도움이 될 것 같아 한 번 살펴보고 가려한다.
+
+## useQuery는 왜 스스로 suspend하지 않을까
+
+이 기능은 `experimental_prefetchInRender`라고 불리는 기능이었으며, PR에 올라왔던 코드를 먼저 살펴보자.
+
+```tsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      experimental_prefetchInRender: true,
+    },
+  },
+})
+
+import React from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { fetchTodos, type Todo } from './api'
+
+function TodoList({ query }: { query: UseQueryResult<Todo[]> }) {
+  const data = React.use(query.promise)
+
+  return (
+    <ul>
+      {data.map((todo) => (
+        <li key={todo.id}>{todo.title}</li>
+      ))}
+    </ul>
+  )
+}
+
+export function App() {
+  const query = useQuery({ queryKey: ['todos'], queryFn: fetchTodos })
+
+  return (
+    <>
+      <h1>Todos</h1>
+      <React.Suspense fallback={<div>Loading...</div>}>
+        <TodoList query={query} />
+      </React.Suspense>
+    </>
+  )
+}
+```
 
 ## 왜 하필 1,000ms일까
 
