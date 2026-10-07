@@ -81,7 +81,7 @@ export async function getUserAction(): Promise<User> {
 }
 ```
 
-The offending code was in a Client Component. It was wrapped in `Suspense` and fetching data with `useSuspenseQuery`, and a Server Function had gone into `queryFn`. Now that we have seen the code, let us answer the first question.
+The offending code was in a Client Component. It was wrapped in Suspense and fetching data with `useSuspenseQuery`, and a Server Function had gone into `queryFn`. Now that we have seen the code, let us answer the first question.
 
 ## Why does switching to useQuery make the error disappear
 
@@ -147,7 +147,7 @@ The reason it never showed up on screen is that once execution moves from SSR to
 
 So, back to the first question. Why does the problem not happen with `useQuery`? The answer is in the code of the two hooks. `useQuery` has no `suspense` option, so there is no `queryFn` call during render. In SSR the `subscribe` never happens, so the function is not called at all and first runs on the browser pass.
 
-But switching to `useQuery` means losing `Suspense`, and beyond that: is "no server function call during render" really enough reason to use it? Why is calling a Server Function during render a problem in the first place? Other functions are fine, so why only server functions?
+But switching to `useQuery` means losing Suspense, and beyond that: is "no server function call during render" really enough reason to use it? Why is calling a Server Function during render a problem in the first place? Other functions are fine, so why only server functions?
 
 ## Why only Server Functions break during render
 
@@ -185,7 +185,7 @@ export const getUserAction = createServerReference('40abc...', callServer)
 
 So when a Server Action is imported into the client at build time, the function becomes a reference to a particular id, and it runs through `createServerReference`. During SSR, though, that does not hand over the real function: `noServerCall` throws immediately. `useSuspenseQuery` fails as a consequence, that information travels to the browser, and the request is made again. Only then can `queryFn` run through `callServer`.
 
-The [React Suspense docs](https://react.dev/reference/react/Suspense) say that when a component throws on the server, React does not abort the render: it puts the nearest `Suspense` fallback into the HTML and starts rendering again on the client. I wanted to know how that is implemented internally, so that an error turns into a retry instead of a failure.
+The [React Suspense docs](https://react.dev/reference/react/Suspense) say that when a component throws on the server, React does not abort the render: it puts the nearest Suspense fallback into the HTML and starts rendering again on the client. I wanted to know how that is implemented internally, so that an error turns into a retry instead of a failure.
 
 ## Why the screen was fine even though an error was thrown
 
@@ -216,7 +216,7 @@ renderSuspenseBoundary() {
 }
 ```
 
-When a throw happens inside a `Suspense` boundary, Fizz does not fail the whole request. It marks only that boundary as `CLIENT_RENDERED`, passes the error to the `onError` callback through `logRecoverableError` (this is the log that showed up in DataDog), and stores the returned digest on the boundary. Then, during flush, it sends that status along with a specific comment in the HTML. The comments are these.
+When a throw happens inside a Suspense boundary, Fizz does not fail the whole request. It marks only that boundary as `CLIENT_RENDERED`, passes the error to the `onError` callback through `logRecoverableError` (this is the log that showed up in DataDog), and stores the returned digest on the boundary. Then, during flush, it sends that status along with a specific comment in the HTML. The comments are these.
 
 ```js
 // packages/react-dom-bindings/src/client/ReactFiberConfigDOM.js
@@ -252,13 +252,13 @@ if (isSuspenseInstanceFallback(suspenseInstance)) {
 }
 ```
 
-This is why no error appeared on screen and it recovered with only a log. Without `Suspense` it would have surfaced like any other error. I used to think `Suspense` was good because it lets you write code knowing the data is there and gives you a loading fallback, but looking at this, `Suspense` is also a boundary that makes error and render handling possible. It ships a comment inside the HTML from SSR, and when the client meets that comment it can decide how to handle everything from that point on.
+This is why no error appeared on screen and it recovered with only a log. Without Suspense it would have surfaced like any other error. I used to think Suspense was good because it lets you write code knowing the data is there and gives you a loading fallback, but looking at this, Suspense is also a boundary that makes error and render handling possible. It ships a comment inside the HTML from SSR, and when the client meets that comment it can decide how to handle everything from that point on.
 
 Honestly, until now I thought of Server Functions as just server functions for touching a database or handling sensitive data; I do not think I had really understood what the docs were saying. Server Functions have to be used properly. The conditions are roughly POST, no caching, and sequential execution.
 
 Why does a server function have to be a POST? First, for GET, which fetches data, Next.js already does that work by reading the data during SSR and building the HTML. As the lower part of the Next.js docs explains, GET is considered safe in HTTP, so caching and prefetching apply. Put a mutation on a GET and the cache answers instead, so the change is not reflected, and a CDN cache cannot tell users apart, so you receive someone else's response.
 
-Now I can answer the second question: why does this create a fetch waterfall? A call happening during render means the request only starts once the render reaches that point. `Suspense` points are wired in series, so the next request can only run after the previous one finishes.
+Now I can answer the second question: why does this create a fetch waterfall? A call happening during render means the request only starts once the render reaches that point. Suspense points are wired in series, so the next request can only run after the previous one finishes.
 
 > I checked this with an experiment, and it only applies to nesting; sibling nodes ran in parallel. Even nesting can go out in parallel if you hydrate with a prefetch.
 
@@ -313,7 +313,7 @@ The reason `broken` shows 30 is, as explained above, that `noServerCall` throws 
 
 The cause was that the server and the browser have different `queryClient`s. The `fixed` code did succeed in SSR and the result was cached. But that was cached in the server's `queryClient`; nothing was handed to the browser's `queryClient`. So the browser's `queryClient` still had an empty query and made the request again. This was the moment the third question, why you should use a Server Component, finally made sense.
 
-The textbook approach is the one the error message recommends: use a Server Component. You `prefetch` the data, `dehydrate` it, pass it to `HydrationBoundary`, and let `useSuspenseQuery` use it. You move the cache filled in the server's `queryClient` straight into the browser's `queryClient`. Then `useSuspenseQuery` only reads the cache, on both sides.
+The textbook approach is the one the error message recommends: use a Server Component. You prefetch the data, `dehydrate` it, pass it to `HydrationBoundary`, and let `useSuspenseQuery` use it. You move the cache filled in the server's `queryClient` straight into the browser's `queryClient`. Then `useSuspenseQuery` only reads the cache, on both sides.
 
 ```tsx
 // page.tsx (server component)
@@ -329,11 +329,11 @@ export default async function Page() {
 }
 ```
 
-Then it struck me that `useSuspenseQuery` is rather half-finished in Next.js. SSR always happens in Next.js, so does using this query mean the cache never arrives on the initial load and the data is always requested twice? Is `HydrationBoundary` plus `prefetch` the only way to handle the initial load? It felt cumbersome, so I looked for other options.
+Then it struck me that `useSuspenseQuery` is rather half-finished in Next.js. SSR always happens in Next.js, so does using this query mean the cache never arrives on the initial load and the data is always requested twice? Is `HydrationBoundary` plus prefetch the only way to handle the initial load? It felt cumbersome, so I looked for other options.
 
-Since React Query v5.40.0 there is another way: do not `await` the prefetch, pass the Promise straight through, and use it in `useSuspenseQuery`. The difference is whether you draw the boundary with `loading.tsx` or handle the fallback branch with a single `Suspense`.
+Since React Query v5.40.0 there is another way: do not `await` the prefetch, pass the Promise straight through, and use it in `useSuspenseQuery`. The difference is whether you draw the boundary with `loading.tsx` or handle the fallback branch with a single Suspense.
 
-If you `await`, the server component itself stops until the data arrives, so the boundary above it shows the fallback. If you do not, the page goes out first and only the `Suspense` wrapping `useSuspenseQuery` waits. So for a slow API, if you are not going to build a separate loading layout, passing the Promise beats always awaiting. To use it, include queries still in the pending state in the `dehydrate` option.
+If you `await`, the server component itself stops until the data arrives, so the boundary above it shows the fallback. If you do not, the page goes out first and only the Suspense wrapping `useSuspenseQuery` waits. So for a slow API, if you are not going to build a separate loading layout, passing the Promise beats always awaiting. To use it, include queries still in the pending state in the `dehydrate` option.
 
 ```ts
 dehydrate: {
@@ -356,7 +356,7 @@ onEntries(...(window[id] ?? [])) // the ones that arrived first
 window[id] = {initialized: true, push: onEntries} // the ones still coming
 ```
 
-So the script only ever has to call `push`, whenever it arrives, and once React is ready that `push` is already the function that puts things in the cache. Scripts arrive one by one as each `Suspense` boundary finishes, and solving "we do not know who will be ready first" this way struck me as genuinely clever. It turns out the RSC payload streams server component results the same way.
+So the script only ever has to call `push`, whenever it arrives, and once React is ready that `push` is already the function that puts things in the cache. Scripts arrive one by one as each Suspense boundary finishes, and solving "we do not know who will be ready first" this way struck me as genuinely clever. It turns out the RSC payload streams server component results the same way.
 
 I did not pick this one, though. For one thing it only works on the first load, when the HTML is built. Navigating with `Link` does not build new HTML, so client components render only in the browser and the waterfall, where the request starts once the render reaches it, remains. Server components, on the other hand, run on the server during navigation too, so the prefetch always leaves first. I think I now understand why it is still experimental and carries a warning.
 
@@ -375,7 +375,7 @@ Again something came out differently from what I expected. I thought prefetching
 
 With `staleTime` at its default of 0, data coming from the server is treated as stale the moment it reaches the browser. So as `useSuspenseQuery` mounts, it uses the cache as the cache and still sends another request from the browser.
 
-> The sentence above is wrong. In `Suspense`, `staleTime` is clamped to a minimum of 1,000ms. More than a second passed between receiving the data and mounting, which is why two requests happened. I wrote about it in detail in [Is React Query's staleTime: 0 really 0?](/en/2026/10/react-query-stale-time-zero).
+> The sentence above is wrong. In Suspense, `staleTime` is clamped to a minimum of 1,000ms. More than a second passed between receiving the data and mounting, which is why two requests happened. I wrote about it in detail in [Is React Query's staleTime: 0 really 0?](/en/2026/10/react-query-stale-time-zero).
 
 The build graph problem I solved afterwards continues in part 2.
 
@@ -383,6 +383,6 @@ The build graph problem I solved afterwards continues in part 2.
 
 One more thing I keep wondering about: how to set `staleTime`. This comes up every time at work. This time it was an API fetching user information that rarely changes, so I set it to about five seconds, but is it fine to decide the number per API on instinct alone? Honestly I do not know what the right number of seconds would be.
 
-What `staleTime` prevents is only the automatic refetch on mount or focus. If you `invalidate` directly wherever the value changes, it refetches right away even with `staleTime` remaining. So a value I changed is reflected immediately anyway, and five seconds is only a problem when the value changes somewhere I do not know about.
+What `staleTime` prevents is only the automatic refetch on mount or focus. If you invalidate directly wherever the value changes, it refetches right away even with `staleTime` remaining. So a value I changed is reflected immediately anyway, and five seconds is only a problem when the value changes somewhere I do not know about.
 
 If freshness matters enough for those seconds to be a problem, I would go to polling or a websocket. But in the end, too short a `staleTime` brings duplicate requests back on slow devices, and too long means a value changed on another device shows up late. Hmm. Maybe I change it when I see a problem.

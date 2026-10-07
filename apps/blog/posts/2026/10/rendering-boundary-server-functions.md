@@ -81,7 +81,7 @@ export async function getUserAction(): Promise<User> {
 }
 ```
 
-문제가 되는 코드는 Client 컴포넌트에서 발생했다. `Suspense`로 감싸 `useSuspenseQuery`로 데이터를 가져오고 있었고, `queryFn`에 Server Function이 들어갔다. 이제 코드를 확인했으니, 첫 번째 의문부터 답해보자.
+문제가 되는 코드는 Client 컴포넌트에서 발생했다. Suspense로 감싸 `useSuspenseQuery`로 데이터를 가져오고 있었고, `queryFn`에 Server Function이 들어갔다. 이제 코드를 확인했으니, 첫 번째 의문부터 답해보자.
 
 ## useQuery로 바꾸면 왜 에러가 사라질까
 
@@ -147,7 +147,7 @@ React Query는 코드가 많고 복잡해 보이지만, 결국 `QueryCache` 객�
 
 그럼 첫 번째 의문으로 돌아가 답해보자. 왜 `useQuery`를 사용하면 이 문제가 발생하지 않는 것일까? 정답은 두 훅의 코드에서 알 수 있다. `useQuery`에는 `suspense` 옵션이 존재하지 않았고, 그 결과 렌더 단계에서 `queryFn`의 실행도 없다. SSR에서는 `subscribe` 자체가 일어나지 않으니, 함수를 호출하지 않고 브라우저 패스에서 첫 실행되기 때문이다.
 
-그런데 `useQuery`로 변경한다면 `Suspense`를 사용할 수 없는 것은 고사하고, 단순히 렌더 단계에서 서버 함수의 호출이 없다고 `useQuery`를 사용해도 되는 것인가? 애초에 렌더 중에 왜 Server Function이 불리는 게 문제가 되는 걸까? 다른 함수들은 문제가 없는데, 왜 서버 함수만 문제가 되는 것일까?
+그런데 `useQuery`로 변경한다면 Suspense를 사용할 수 없는 것은 고사하고, 단순히 렌더 단계에서 서버 함수의 호출이 없다고 `useQuery`를 사용해도 되는 것인가? 애초에 렌더 중에 왜 Server Function이 불리는 게 문제가 되는 걸까? 다른 함수들은 문제가 없는데, 왜 서버 함수만 문제가 되는 것일까?
 
 ## 왜 Server Function만 렌더 중에 문제가 될까
 
@@ -185,7 +185,7 @@ export const getUserAction = createServerReference('40abc...', callServer)
 
 그러니까 Server Action은 빌드 시에 클라이언트에 import 되어 있으면 이 함수는 바로 특정 id 값으로 참조가 된다. 그리고 그 서버 함수는 `createServerReference`를 통해 실행된다. 그런데 이때 SSR의 경우, 저게 실제 함수로 넘어가는 게 아니라 `noServerCall`로 인해 바로 에러가 발생하는 것이다. 그렇게 연쇄적으로 `useSuspenseQuery`가 실패하게 되고, 이 정보가 브라우저로 넘어가서 다시 재요청을 하게 된다. 그때 비로소 `callServer`로 `queryFn`이 실행될 수 있는 것이다.
 
-[React 공식 Suspense 문서](https://react.dev/reference/react/Suspense)를 보면, 서버에서 컴포넌트가 에러를 던지면 렌더를 중단하지 않고 가장 가까운 `Suspense`의 fallback을 HTML에 넣어서 보내고 다시 클라이언트에서 렌더를 시작한다고 나와 있다. 그런데 이것 또한 내부적으로 어떻게 구현되어 있어서 에러를 만들지 않고 재요청을 만드는 것일지 궁금해서 찾아보았다.
+[React 공식 Suspense 문서](https://react.dev/reference/react/Suspense)를 보면, 서버에서 컴포넌트가 에러를 던지면 렌더를 중단하지 않고 가장 가까운 Suspense의 fallback을 HTML에 넣어서 보내고 다시 클라이언트에서 렌더를 시작한다고 나와 있다. 그런데 이것 또한 내부적으로 어떻게 구현되어 있어서 에러를 만들지 않고 재요청을 만드는 것일지 궁금해서 찾아보았다.
 
 ## 에러가 났는데 화면은 왜 멀쩡했을까
 
@@ -216,7 +216,7 @@ renderSuspenseBoundary() {
 }
 ```
 
-Fizz는 `Suspense` 경계 안에서 `throw`가 나면 요청 전체를 실패시키지 않는다. 그 경계만 `CLIENT_RENDERED`로 표시하고, 에러는 `logRecoverableError`로 `onError` 콜백에 넘긴 뒤(이게 DataDog에 찍힌 로그다), 돌려받은 digest를 경계에 저장한다. 그리고 flush 단계에서 이 status와 HTML에 특정 주석을 함께 넘기는데, 주석의 종류는 아래와 같다.
+Fizz는 Suspense 경계 안에서 `throw`가 나면 요청 전체를 실패시키지 않는다. 그 경계만 `CLIENT_RENDERED`로 표시하고, 에러는 `logRecoverableError`로 `onError` 콜백에 넘긴 뒤(이게 DataDog에 찍힌 로그다), 돌려받은 digest를 경계에 저장한다. 그리고 flush 단계에서 이 status와 HTML에 특정 주석을 함께 넘기는데, 주석의 종류는 아래와 같다.
 
 ```js
 // packages/react-dom-bindings/src/client/ReactFiberConfigDOM.js
@@ -252,13 +252,13 @@ if (isSuspenseInstanceFallback(suspenseInstance)) {
 }
 ```
 
-이 로직으로 인해서 화면에 에러가 발생하지 않고, 로그로만 기록되고 복구되었던 것이다. `Suspense`를 쓰지 않았다면 그냥 다른 에러들처럼 에러가 발생했겠지. `Suspense`를 사용하면 데이터가 존재한다는 확신 아래에 코드를 작성할 수 있는 장점과 로딩 fallback 처리가 가능해서 좋은 것이라고만 생각했는데, 이걸 보니 `Suspense`는 에러와 렌더 처리를 가능하게 하는 경계이기도 하구나라는 생각이 든다. SSR에서 HTML에 주석을 포함시켜 보내고, 그 주석을 만나면 여기부터는 어떻게 처리할지 결정이 가능하기 때문이다.
+이 로직으로 인해서 화면에 에러가 발생하지 않고, 로그로만 기록되고 복구되었던 것이다. Suspense를 쓰지 않았다면 그냥 다른 에러들처럼 에러가 발생했겠지. Suspense를 사용하면 데이터가 존재한다는 확신 아래에 코드를 작성할 수 있는 장점과 로딩 fallback 처리가 가능해서 좋은 것이라고만 생각했는데, 이걸 보니 Suspense는 에러와 렌더 처리를 가능하게 하는 경계이기도 하구나라는 생각이 든다. SSR에서 HTML에 주석을 포함시켜 보내고, 그 주석을 만나면 여기부터는 어떻게 처리할지 결정이 가능하기 때문이다.
 
 사실 지금까지 Server Function을 단순히 DB에 접근하거나 민감 데이터를 조작하기 위한 서버 함수라고만 생각했지, 공식 문서에서 말하는 내용을 제대로 이해하지 못했던 것 같다. Server Function은 제대로 써야 한다. 그 조건은 크게 POST, 캐시 없음, 순차 실행이라는 성질을 갖는다.
 
 이 서버 함수가 꼭 POST가 되어야 하는 이유는 뭘까? 우선 데이터를 가져오는 GET의 경우, Next.js에서는 항상 SSR로 이미 데이터를 읽어와 HTML을 만들어주는 그 역할을 이미 해주고 있다. Next.js 공식 문서 아랫부분에 보면 자세히 나와 있지만, GET은 HTTP상 안전하다고 판단돼서 캐시와 프리페치가 동작한다. 그래서 Mutation을 GET에 실으면 캐시가 대신 응답해서 변경이 반영이 안 되고, CDN 캐시는 유저를 구분 못 해 남의 응답을 받게 된다.
 
-이제 두 번째 의문, '왜 이 방식이 fetch waterfall을 만들어내는 것일까?'에 답할 수 있게 되었다. 렌더 중에 호출이 발생한다는 것은 렌더가 그 지점에 닿아야 요청이 발생한다는 것이다. `Suspense` 지점은 앞의 요청이 끝나야 그다음 요청이 실행될 수 있게 직렬로 연결되어 있다.
+이제 두 번째 의문, '왜 이 방식이 fetch waterfall을 만들어내는 것일까?'에 답할 수 있게 되었다. 렌더 중에 호출이 발생한다는 것은 렌더가 그 지점에 닿아야 요청이 발생한다는 것이다. Suspense 지점은 앞의 요청이 끝나야 그다음 요청이 실행될 수 있게 직렬로 연결되어 있다.
 
 > 실험으로 확인해보았으나 이는 중첩의 경우에만 해당하는 것이고, 형제 노드의 경우 병렬로 실행되었다. 이마저 prefetch로 hydrate한다면 중첩도 병렬로 나갈 수 있게 만들 수 있다.
 
@@ -313,7 +313,7 @@ function FixedUserCard({
 
 원인은 서버와 브라우저의 `queryClient`가 다르다는 데에 있었다. 분명 `fixed` 코드는 SSR에서 성공하고 캐싱이 되었다. 그러나 그건 서버 `queryClient`에서 캐싱이 된 것이지, 브라우저 `queryClient`에는 아무것도 전달되지 못했다. 그래서 브라우저 `queryClient`에는 여전히 비어 있는 query가 되었고, 다시 재요청이 발생한 것이었다. 세 번째 의문이었던 Server Component를 사용해야 하는 이유에 대한 부분이 이해가 되는 순간이었다.
 
-정석적인 방법으로는 에러 메시지에서 추천한 방법인 Server Component를 활용하는 방법이 있다. `prefetch`를 사용해서 미리 받아온 내용을 `dehydrate`해서 `HydrationBoundary`에 넘기고, 이를 `useSuspenseQuery`에서 사용하도록 만드는 방법이다. 서버 `queryClient`에 채워진 캐시를 브라우저 `queryClient`로 그대로 옮겨주는 것이다. 그러면 `useSuspenseQuery`는 서버에서도 브라우저에서도 캐시만 읽게 된다.
+정석적인 방법으로는 에러 메시지에서 추천한 방법인 Server Component를 활용하는 방법이 있다. prefetch를 사용해서 미리 받아온 내용을 `dehydrate`해서 `HydrationBoundary`에 넘기고, 이를 `useSuspenseQuery`에서 사용하도록 만드는 방법이다. 서버 `queryClient`에 채워진 캐시를 브라우저 `queryClient`로 그대로 옮겨주는 것이다. 그러면 `useSuspenseQuery`는 서버에서도 브라우저에서도 캐시만 읽게 된다.
 
 ```tsx
 // page.tsx (서버 컴포넌트)
@@ -329,11 +329,11 @@ export default async function Page() {
 }
 ```
 
-그런데 문득 `useSuspenseQuery`가 Next.js에서는 너무 반쪽짜리 아닌가란 생각이 들었다. Next.js에서는 항상 SSR이 발생하는데, 그러면 이 쿼리를 사용하면 매번 초기 로드에는 캐싱이 전달이 안 돼서 데이터가 중복 요청이 될 수밖에 없는 건가? 초기 로드를 위해서는 `HydrationBoundary`와 `prefetch`와 함께 사용할 수밖에 없나? 뭔가 번거롭다는 생각이 들어 다른 방법들은 없는지 찾아보았다.
+그런데 문득 `useSuspenseQuery`가 Next.js에서는 너무 반쪽짜리 아닌가란 생각이 들었다. Next.js에서는 항상 SSR이 발생하는데, 그러면 이 쿼리를 사용하면 매번 초기 로드에는 캐싱이 전달이 안 돼서 데이터가 중복 요청이 될 수밖에 없는 건가? 초기 로드를 위해서는 `HydrationBoundary`와 prefetch와 함께 사용할 수밖에 없나? 뭔가 번거롭다는 생각이 들어 다른 방법들은 없는지 찾아보았다.
 
-React Query v5.40.0부터 추가된 방법으로는 `prefetch`를 `await`하지 않고 바로 Promise로 넘겨 이를 `useSuspenseQuery`에서 사용하도록 하는 방법도 있는데, `loading.tsx`로 경계를 만들 것이냐 혹은 `Suspense` 하나로 fallback 분기를 쉽게 처리할 것이냐의 차이가 있다.
+React Query v5.40.0부터 추가된 방법으로는 prefetch를 `await`하지 않고 바로 Promise로 넘겨 이를 `useSuspenseQuery`에서 사용하도록 하는 방법도 있는데, `loading.tsx`로 경계를 만들 것이냐 혹은 Suspense 하나로 fallback 분기를 쉽게 처리할 것이냐의 차이가 있다.
 
-`await`을 하면 서버 컴포넌트 자체가 데이터를 받을 때까지 멈추기 때문에 그 위의 경계가 fallback을 보여주게 되고, `await`을 하지 않으면 페이지는 먼저 나가고 `useSuspenseQuery`를 감싼 `Suspense`만 기다리게 된다. 그래서 오래 걸리는 API의 경우, loading 레이아웃을 따로 만들지 않을 거면 무조건 `await`하는 방법보다 Promise를 넘기는 방식이 유리하다. 이를 적용하려면 아래 코드처럼 `queryClient`의 `dehydrate` 옵션에 기본 pending 상태인 쿼리까지 포함시키면 된다.
+`await`을 하면 서버 컴포넌트 자체가 데이터를 받을 때까지 멈추기 때문에 그 위의 경계가 fallback을 보여주게 되고, `await`을 하지 않으면 페이지는 먼저 나가고 `useSuspenseQuery`를 감싼 Suspense만 기다리게 된다. 그래서 오래 걸리는 API의 경우, loading 레이아웃을 따로 만들지 않을 거면 무조건 `await`하는 방법보다 Promise를 넘기는 방식이 유리하다. 이를 적용하려면 아래 코드처럼 `queryClient`의 `dehydrate` 옵션에 기본 pending 상태인 쿼리까지 포함시키면 된다.
 
 ```ts
 dehydrate: {
@@ -356,15 +356,15 @@ onEntries(...(window[id] ?? [])) // 먼저 도착한 것들
 window[id] = {initialized: true, push: onEntries} // 나중에 올 것들
 ```
 
-그러니까 script는 언제 도착하든 `push`만 부르면 되는 것이고, React가 준비된 뒤에는 그 `push`가 곧 캐시에 넣는 함수가 되어 있는 것이다. `Suspense` 경계가 끝날 때마다 script가 제각각 도착할 텐데, 누가 먼저 준비될지 모르는 상황을 이렇게 풀었다는 게 진짜 똑똑한 방법이라고 생각했다. 이게 알아보니 RSC의 payload도 같은 방식으로 서버 컴포넌트 결과를 스트리밍하는 방식이었다.
+그러니까 script는 언제 도착하든 `push`만 부르면 되는 것이고, React가 준비된 뒤에는 그 `push`가 곧 캐시에 넣는 함수가 되어 있는 것이다. Suspense 경계가 끝날 때마다 script가 제각각 도착할 텐데, 누가 먼저 준비될지 모르는 상황을 이렇게 풀었다는 게 진짜 똑똑한 방법이라고 생각했다. 이게 알아보니 RSC의 payload도 같은 방식으로 서버 컴포넌트 결과를 스트리밍하는 방식이었다.
 
-그런데 이 방법은 선택하지 않았다. 일단 이 방식은 HTML을 만드는 첫 로드에서만 동작한다. `Link`로 페이지를 이동할 때는 HTML을 새로 만들지 않으니, 클라이언트 컴포넌트는 브라우저에서만 렌더되고 렌더가 닿아야 요청이 시작되는 waterfall이 그대로 남게 된다. 반면 서버 컴포넌트는 페이지 이동 때도 서버에서 실행되기 때문에 `prefetch`는 항상 제일 먼저 출발한다. 그래서 왜 experimental로 남아 있고 경고가 쓰여 있는지 알 것 같았다.
+그런데 이 방법은 선택하지 않았다. 일단 이 방식은 HTML을 만드는 첫 로드에서만 동작한다. `Link`로 페이지를 이동할 때는 HTML을 새로 만들지 않으니, 클라이언트 컴포넌트는 브라우저에서만 렌더되고 렌더가 닿아야 요청이 시작되는 waterfall이 그대로 남게 된다. 반면 서버 컴포넌트는 페이지 이동 때도 서버에서 실행되기 때문에 prefetch는 항상 제일 먼저 출발한다. 그래서 왜 experimental로 남아 있고 경고가 쓰여 있는지 알 것 같았다.
 
-최종적으로는 `prefetch`를 `await`하는 방식을 선택했다. 유저 정보를 가져오는 API는 응답이 빨라서 `await`으로도 충분했고, 굳이 `dehydrate` 옵션까지 건드려서 설정을 늘리는 게 더 큰 트레이드오프라 판단했기 때문이다. 그리고 같은 샌드박스에서 다시 30회를 돌려보았다.
+최종적으로는 prefetch를 `await`하는 방식을 선택했다. 유저 정보를 가져오는 API는 응답이 빨라서 `await`으로도 충분했고, 굳이 `dehydrate` 옵션까지 건드려서 설정을 늘리는 게 더 큰 트레이드오프라 판단했기 때문이다. 그리고 같은 샌드박스에서 다시 30회를 돌려보았다.
 
 ## 그래서 효과는
 
-또 내 생각과 다른 부분이 나왔다. `prefetch`해서 `HydrationBoundary`로 넘겨주기만 하면 끝일 줄 알았는데, 결과만 먼저 말하자면 `hydrated-stale`은 `fixed`와 똑같이 60회가 찍혔다. 원인은 `staleTime`이었다. 그래서 `hydrated-stale`, `hydrated-fresh` 테스트 두 가지를 더 추가했다.
+또 내 생각과 다른 부분이 나왔다. prefetch해서 `HydrationBoundary`로 넘겨주기만 하면 끝일 줄 알았는데, 결과만 먼저 말하자면 `hydrated-stale`은 `fixed`와 똑같이 60회가 찍혔다. 원인은 `staleTime`이었다. 그래서 `hydrated-stale`, `hydrated-fresh` 테스트 두 가지를 더 추가했다.
 
 | 시나리오         | 요청 수 | 총 네트워크 시간 | 실행당 중앙값 | 실행당 p95 |
 | ---------------- | ------: | ---------------: | ------------: | ---------: |
@@ -375,7 +375,7 @@ window[id] = {initialized: true, push: onEntries} // 나중에 올 것들
 
 `staleTime`이 기본값인 0이면 서버에서 넘어온 데이터가 브라우저에 도착하자마자 stale로 취급된다. 그래서 `useSuspenseQuery`가 마운트되면서 캐시는 캐시대로 쓰고, 브라우저에서 또 요청을 보내버린 것이다.
 
-> 위 문장은 틀렸다. `Suspense`에서 `staleTime`은 최소 1,000ms로 설정된다. 데이터를 받고 마운트되기까지 1초가 초과되어 두 번 요청이 발생한 것이다. 자세한 내용은 [ReactQuery의 staleTime: 0은 정말 0일까?](/2026/10/react-query-stale-time-zero)에 썼다.
+> 위 문장은 틀렸다. Suspense에서 `staleTime`은 최소 1,000ms로 설정된다. 데이터를 받고 마운트되기까지 1초가 초과되어 두 번 요청이 발생한 것이다. 자세한 내용은 [ReactQuery의 staleTime: 0은 정말 0일까?](/2026/10/react-query-stale-time-zero)에 썼다.
 
 후속으로 해결한 빌드 그래프 문제는 2편에서 계속.
 
@@ -383,6 +383,6 @@ window[id] = {initialized: true, push: onEntries} // 나중에 올 것들
 
 그런데 여기서 고민이 하나 더 생겼다. `staleTime`의 시간 설정. 이건 실무에서 매번 고민되는 부분이다. 이번엔 유저의 잘 바뀌지 않는 정보를 가져오는 API라 5초 정도로 설정했는데, 매번 API별로 단순히 내 감으로 숫자를 결정해도 되는 걸까? 솔직히 몇 초가 맞는 값일지 잘 모르겠다.
 
-`staleTime`이 막는 건 마운트나 포커스 때 알아서 다시 가져오는 동작뿐이다. 값이 바뀌는 곳에서 직접 `invalidate`를 해주면 `staleTime`이 남아 있어도 바로 다시 가져온다. 그러니까 내가 바꾼 값은 어차피 바로 반영이 되는 거고, 5초가 문제가 되는 건 내가 모르는 곳에서 값이 바뀌는 경우뿐이다.
+`staleTime`이 막는 건 마운트나 포커스 때 알아서 다시 가져오는 동작뿐이다. 값이 바뀌는 곳에서 직접 invalidate를 해주면 `staleTime`이 남아 있어도 바로 다시 가져온다. 그러니까 내가 바꾼 값은 어차피 바로 반영이 되는 거고, 5초가 문제가 되는 건 내가 모르는 곳에서 값이 바뀌는 경우뿐이다.
 
 그 초가 문제될 만큼 최신성이 중요하면 polling이나 웹소켓으로 가겠지만, 결국 `staleTime`이 너무 짧으면 느린 기기에서는 중복 요청이 다시 생길 것이고, 너무 길면 다른 기기에서 바꾼 값이 늦게 보일 것이다. 흠... 문제가 보이면 그때 바꾸면 되려나.
