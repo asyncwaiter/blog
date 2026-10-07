@@ -1,5 +1,5 @@
 ---
-title: 'ReactQuery의 staleTime: 0은 정말 0일까?'
+title: 'ReactQuery의 staleTime: 0은 정말 0일까? 왜?'
 tags:
   - react
   - state-management
@@ -7,7 +7,7 @@ tags:
   - debugging
 published: true
 date: 2026-10-03 21:00:00
-description: 'prefetch한 데이터를 hydrate했는데도 dev 모드 30회 실행에서 요청이 60회 찍혔다. 원인을 staleTime 0으로 설명했던 지난 글의 결론은 틀렸다. React Query는 Suspense에서 staleTime을 최소 1,000ms로 올리고, 그 숫자는 React가 fallback 커밋 이후 reveal을 300ms throttle하기 때문에 나온 값이었다. 실험에서는 308ms, 608ms, 908ms 간격으로 노출됐다.'
+description: '글 다쓰고 다시작성해야함'
 art:
   undraw: alarm-clock
   hue: cyan
@@ -68,9 +68,9 @@ export default async function Page() {
 
 SSR에서 `prefetch`를 하고 이를 hydrate했으니 한 번일 것 같다. 그런데 [이전 포스팅](/2026/10/rendering-boundary-server-functions)의 `hydrated-stale` 실험에서, 이 코드를 dev 모드에서 30회 돌렸을 때 요청이 60회 찍히는 것을 확인할 수 있었다. 매 실행마다 `queryFn`이 두 번 호출된 것이다.
 
-왜 두 번 찍혔을까? 이전 포스팅에서는 두 배의 이유를 `staleTime`이 0이기 때문이라 설명했는데, 이 설명은 옳지 못했다. 그 이유를 React Query의 `staleTime` 내부 코드를 통해 살펴보자.
+왜 두 번 찍혔을까? 이전 포스팅에서는 두 배의 이유를 `staleTime`이 0이기 때문이라 설명했는데, 이 설명은 옳지 못했다. Suspense 모드에서 `staleTime`은 0이 아니라 최소 1,000ms, 1초로 설정된다. 이를 React Query 내부 코드로 확인해보자.
 
-## staleTime 0은 0이 아니다
+## Suspense 모드에서 staleTime 0은 0이 아니다
 
 `@tanstack/react-query@5.103.3`의 `suspense.ts` 코드를 보면 Suspense에서는 `staleTime`이 사실 0이 아님을 알 수 있다. `staleTime`이 0이어도 최소 1,000ms로 처리되도록 하고 있다.
 
@@ -98,27 +98,55 @@ export const ensureSuspenseTimers = (
 }
 ```
 
-결국 테스트에서 네트워크 요청이 2배 발생한 이유는, 데이터가 도착한 뒤 1초가 넘었기 때문이다. 확실하게 확인하기 위해 SSR에서 prefetch되었을 때의 `dataUpdatedAt`과 브라우저에서 마운트된 후 `Date.now()`의 차이를 찍어보는 스텝을 추가해 다시 돌려보았다.
+결국 테스트에서 네트워크 요청이 2배 발생한 이유는, 데이터가 도착한 뒤 0초가 넘었기 때문이 아니라 1초가 넘었기 때문이다. 여기서 의아한 점 세 가지를 한 번 파볼 예정이다.
+
+1. 왜 최소 1초로 설정이 되어 있는가?
+2. 이 시간 차는 어디서, 어떻게 측정되고 있는가?
+3. 내 실험 환경에서 이 1초를 만든 원인은 무엇인가?
+
+첫 번째부터 알아보자. 리액트쿼리팀은 Suspense 모드 내에서 왜 `staleTime`을 최소 1초로 설정했을까? 사실 왜 최소값이 필요한지는 코드 주석에 적혀 있었다. suspend 뒤 리마운트될 때의 불필요한 refetch를 막기 위해서. 다만 왜 하필 1초인지는 어디에도 적혀 있지 않았다. 이 부분은 뒤에서 Suspense의 throttle을 근거로 추측해볼 예정이다.
+
+주석이 말하는 상황을 다시 설명해보자면 이렇다. `useSuspenseQuery`는 렌더 중에 fetch를 시작하고 suspend된다. 이때 기존 render는 버려지고, 그 안에서 만들어진 observer도 구독 한 번 못 해보고 함께 사라진다. 요청은 그동안 캐시에서 끝나고, 데이터가 도착한 뒤 재시도 때 새 observer가 만들어져 처음 구독한다. 기존 `useQuery`와는 다르게 구독 시점에 이미 데이터가 도착해 있다는 것이다. stale 판정은 이 구독 시점에 이뤄지는데, `staleTime`이 0이라면 데이터가 도착한 지 시간이 0보다는 지나 있을 테니 무조건 stale 판정이 되고 네트워크 재호출이 발생한다. 최소값은 이를 막기 위한 것이다.
+
+그런데 React의 컴포넌트는 순수해야 한다. 몇 번이고 렌더해도 동일한 결과를 내야하고, 그러기에 렌더 중 부수효과를 발생시키면 안된다. 근데 Suspense 모드에서는 렌더 중 fetch를 한다. 엄밀히는 규칙을 어기는 것인데, 왜 문제가 생기지 않을까? 코드를 직접 살펴보았다.
 
 ```ts
-useEffect(() => {
-  const state = queryClient.getQueryState(options.queryKey)
-  logMountDataAge(scenario, state?.dataUpdatedAt)
-}, [])
+  async fetch(
+    options?: QueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+    fetchOptions?: FetchOptions<TQueryFnData>,
+  ): Promise<TData> {
+    if (
+      this.state.fetchStatus !== 'idle' &&
+      // If the promise in the retryer is already rejected, we have to definitely
+      // re-start the fetch; there is a chance that the query is still in a
+      // pending state when that happens
+      this.#retryer?.status() !== 'rejected'
+    ) {
+      if (this.state.data !== undefined && fetchOptions?.cancelRefetch) {
+        // Silently cancel current fetch if the user wants to cancel refetch
+        this.cancel({ silent: true })
+      } else if (this.#retryer) {
+        // make sure that retries that were potentially cancelled due to unmounts can continue
+        this.#retryer.continueRetry()
+        // Return current promise if we are already fetching
+        return this.#retryer.promise
+      }
 ```
 
-마지막 열이 remount 시점의 데이터 나이(`Date.now() - dataUpdatedAt`)다.
+출처: [`query-core/src/query.ts#L590-L609`](https://github.com/TanStack/query/blob/fe053bf8e947cd869db91e10372bad3c41bc7b77/packages/query-core/src/query.ts#L590-L609)
 
-| 시나리오         | 요청 순서        | refetch 중앙값 | refetch p95 | remount 시 데이터 나이 중앙값 |
-| ---------------- | ---------------- | -------------: | ----------: | ----------------------------: |
-| `hydrated-stale` | ssr-direct → bff |        355.0ms |     371.0ms |                     1,181.5ms |
-| `hydrated-fresh` | ssr-direct only  |   refetch 없음 |           — |                     1,180.0ms |
+코드를 보면 다시 렌더가 된다해도 몇 번이고 재요청하지 않도록, `retryer`로 이미 요청이 갔는지 확인하고 그 요청을 다시 돌려주고 있다. 이전 렌더가 버려지더라도 새로운 렌더가 그 요청을 이어받도록 하는 것이다. 그리고 이 요청이 끝나면 쿼리 데이터가 바뀌게 되고, Promise가 reolve되어 React에서 retry(재시도)를 시작한다. 여기서 재시도는 리렌더와 다르고, 한 번도 커밋된 적이 없다면 사실상 처음부터 다시 마운트하는 것과 같다. 표로 한 번 살펴보자.
 
-역시 결과는 1,000ms를 초과했다. 그래서 stale 판정이 났고, 요청이 두 번 갔던 것이다.
+|                        | 리렌더                                             | 리마운트                                      | 재시도 (retry)                                                 |
+| ---------------------- | -------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------- |
+| 언제 발생              | state 변경, 부모 리렌더, 구독한 외부 저장소의 알림 | key나 컴포넌트 타입이 바뀔 때                 | suspend를 일으킨 Promise가 resolve될 때                        |
+| 직전 상태              | 마운트되어 화면에 있음                             | 마운트되어 화면에 있음                        | 커밋된 적 없음 (fallback이 대신 보임)                          |
+| fiber 상태             | 그대로 이어 씀                                     | 기존 것을 버리고 새로 만듦                    | 저장된 것이 없어서 새로 만듦                                   |
+| useState 초기화 함수   | 실행 안 됨                                         | 다시 실행됨                                   | 다시 실행됨                                                    |
+| 이전 effect의 cleanup  | 의존성이 바뀐 effect만                             | 전부 실행됨                                   | 실행할 것이 없음 (effect가 돈 적 없음)                         |
+| React Query의 observer | 같은 observer 유지                                 | 기존 observer는 구독 해제, 새 observer가 구독 | 첫 observer는 구독한 적 없이 사라지고, 새 observer가 처음 구독 |
 
-근데 이 1초라는 간격을 만든 건 코드가 아니라 환경이 만든 것이다. 이번 실험은 dev 모드였기 때문에 1초가 넘게 걸렸는데, 이걸 prod 모드로 돌려보면 번들링 작업이 최적화된 상태이기에 로드와 hydration이 빠르게 끝나 1,000ms 안에 들어오기에 두 번 요청이 발생하지 않았다.
-
-물론 prod 모드라도 저사양 기기나 네트워크에서는 로드되고 hydrate되는 시간이 1초보다 훨씬 길어질 수 있기 때문에 refetch가 발생할 수 있다. 그래서 첫 번째 코드 문제의 답은 '한 번일 수도, 두 번일 수도 있다'이다.
+한 번 커밋된 뒤 다시 suspend되면 state는 유지된다. 이건 실험을 돌려서 console이 찍히는 것을 보는게 훨씬 직관적이었다. 실험은 따로 [별도의 레포](https://github.com/asyncwaiter/blog-experiment/blob/main/src/experiments/rerender-remount-retry/index.tsx)에 올려두었다.
 
 ## 왜 하필 1,000ms일까
 
