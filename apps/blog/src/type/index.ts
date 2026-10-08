@@ -8,15 +8,10 @@ export interface ArtSpec {
 
 export interface FrontMatter {
   title: string
-  category: string
   tags: string[]
   published: boolean
   date: string
   description: string
-  template: string
-  path: string
-  socialImageUrl?: string
-  socialImageCredit?: string
   series?: string
   seriesOrder?: number
   featured?: boolean

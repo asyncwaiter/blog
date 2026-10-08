@@ -333,7 +333,6 @@ const LayoutWrapper = ({
   const pathname = usePathname()
   const isEn = pathname?.startsWith('/en')
   let containerClass = stylex.props(sx.containerClass).className
-  const wide = false
   if (pathname === '/' || pathname === '/en') {
     containerClass = stylex.props(sx.container).className
   } else if (pathname === '/about' || pathname === '/en/about') {
@@ -354,7 +353,7 @@ const LayoutWrapper = ({
         {isEn ? 'Skip to content' : '본문으로 건너뛰기'}
       </a>
       <Header enSlugs={enSlugs} />
-      <SectionContainer className={wide ? '' : containerClass} wide={wide}>
+      <SectionContainer className={containerClass}>
         <main id="main" className={stylex.props(sx.main).className}>
           {children}
         </main>
