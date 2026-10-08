@@ -144,8 +144,8 @@ catalogs:
       specifier: 2.0.0
       version: 2.0.0
     isbot:
-      specifier: ^5.2.1
-      version: 5.2.1
+      specifier: ^5.2.2
+      version: 5.2.2
     mermaid:
       specifier: ^12.0.0
       version: 12.0.0
@@ -249,7 +249,7 @@ importers:
         version: 2.3.6(supports-color@10.2.2)
       isbot:
         specifier: 'catalog:'
-        version: 5.2.1
+        version: 5.2.2
       mermaid:
         specifier: 'catalog:'
         version: 12.0.0
@@ -2481,8 +2481,8 @@ packages:
     resolution: {integrity: sha512-VRSzKkbMm5jMDoKLbltAkFQ5Qr7VDiTFGXxYFXXowVj387GeGNOCsOH6Msy00SGZ3Fp84b1Naa1psqgcCIEP5Q==}
     engines: {node: '>=0.10.0'}
 
-  isbot@5.2.1:
-    resolution: {integrity: sha512-dJ+LpKyClQZ7NG+j3OensC/mAZkGpukE9YUrgPYvAZj2doVL0edfDgywTUh5CXa0o+nW9a1V9e5+CJTX8+SxRw==}
+  isbot@5.2.2:
+    resolution: {integrity: sha512-iQcBXcd+Rv/pkubRyGh2utW2j1oPG5hZY6TUhVPpqK4G+o3IbxpJNx04hgksjc/N7GK5pEorUxDeg31cFgEk/w==}
     engines: {node: '>=18'}
 
   isexe@2.0.0:
@@ -5664,7 +5664,7 @@ snapshots:
 
   is-plain-object@5.0.0: {}
 
-  isbot@5.2.1: {}
+  isbot@5.2.2: {}
 
   isexe@2.0.0: {}
 
