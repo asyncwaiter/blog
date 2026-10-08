@@ -331,7 +331,7 @@ const LayoutWrapper = ({
   enSlugs: string[]
 }) => {
   const pathname = usePathname()
-  const isEn = pathname?.startsWith('/en')
+  const isEn = useLocale().locale === 'en'
   let containerClass = stylex.props(sx.containerClass).className
   if (pathname === '/' || pathname === '/en') {
     containerClass = stylex.props(sx.container).className
