@@ -7,7 +7,7 @@ tags:
   - debugging
 published: true
 date: 2026-10-03 21:00:00
-description: '글 다쓰고 다시작성해야함'
+description: 'prefetch하고 hydrate까지 했는데 queryFn이 두 번 호출됐다. 지난 글에서는 staleTime이 0이라서라고 설명했는데, 이 설명은 옳지 못했다. Suspense 모드에서 staleTime은 최소 1,000ms로 보정된다. 이번 글에서는 왜 최소값이 필요한지, 왜 하필 1초인지를 React Query와 React 내부 코드로 따라가 봤다. suspend된 렌더는 아무것도 남기지 않는다는 점, 그리고 Suspense의 300ms throttle이 그 실마리였다.'
 art:
   undraw: alarm-clock
   hue: cyan
@@ -106,9 +106,9 @@ export const ensureSuspenseTimers = (
 
 ## 왜 최소값이 필요했을까
 
-첫 번째부터 알아보자. 리액트쿼리팀은 Suspense 모드 내에서 왜 `staleTime`을 최소 1초로 설정했을까? 사실 왜 최소값이 필요한지는 코드 주석에 적혀 있었다. 위 코드의 주석을 보면 suspend 뒤 리마운트될 때의 불필요한 refetch를 막기 위해서라고 한다. 다만 왜 하필 1초인지는 어디에도 적혀 있지 않았다. 이 부분은 뒤에서 Suspense의 throttle을 근거로 추측해볼 예정이다.
+첫 번째부터 알아보자. 리액트쿼리팀은 Suspense 모드 내에서 왜 `staleTime`을 최소 1초로 설정했을까? 사실 왜 최소값이 필요한지는 코드 주석에 적혀 있었다. 위 코드의 주석을 보면 suspend 뒤 리마운트될 때의 불필요한 refetch를 막기 위해서라고 한다. 다만 왜 하필 1초인지는 확실히 명시되어 있지 않았는데, 이 부분은 뒤에서 Suspense의 throttle을 근거로 추측해볼 예정이다.
 
-주석이 말하는 상황을 다시 설명해보자면 이렇다. `useSuspenseQuery`는 렌더 중에 fetch를 시작하고 suspend된다. 이때 기존 render는 버려지고, 그 안에서 만들어진 observer도 구독 한 번 못 해보고 함께 사라진다. 요청은 그동안 캐시에서 끝나고, 데이터가 도착한 뒤 재시도 때 새 observer가 만들어져 처음 구독한다. 기존 `useQuery`와는 다르게 구독 시점에 이미 데이터가 도착해 있다는 것이다. stale 판정은 이 구독 시점에 이뤄지는데, `staleTime`이 0이라면 데이터가 도착한 지 시간이 0보다는 지나 있을 테니 무조건 stale 판정이 되고 네트워크 재호출이 발생한다. 최소값은 이를 막기 위한 것이다.
+주석이 말하는 상황을 다시 설명해보자면 이렇다. `useSuspenseQuery`는 렌더 중에 fetch를 시작하고 suspend된다. 이때 기존 render는 버려지고, 그 안에서 만들어진 observer도 함께 사라진다. 그리고 데이터가 도착한 뒤 재시도 때 새 observer가 만들어져 처음 구독한다. 결국 기존 `useQuery`와는 다르게 구독 시점에 이미 데이터가 도착해 있다는 것이다. stale 판정은 이 구독 시점에 이뤄지는데, `staleTime`이 0이라면 데이터가 도착한 지 시간이 0보다는 지나 있을 테니 무조건 stale 판정이 되고 네트워크 재호출이 발생한다. 최소값은 이를 막기 위한 것이다.
 
 그런데 React의 컴포넌트는 순수해야 한다. 몇 번이고 렌더해도 동일한 결과를 내야하고, 그러기에 렌더 중 부수효과를 발생시키면 안된다. 근데 Suspense 모드에서는 렌더 중 fetch를 한다. 엄밀히는 규칙을 어기는 것인데, 왜 문제가 생기지 않을까? 코드를 직접 살펴보았다.
 
@@ -135,9 +135,7 @@ export const ensureSuspenseTimers = (
       }
 ```
 
-출처: [query-core/src/query.ts#L590-L609](https://github.com/TanStack/query/blob/fe053bf8e947cd869db91e10372bad3c41bc7b77/packages/query-core/src/query.ts#L590-L609)
-
-코드를 보면 다시 렌더가 된다해도 몇 번이고 재요청하지 않도록, `retryer`로 이미 요청이 갔는지 확인하고 그 요청을 다시 돌려주고 있다. 이전 렌더가 버려지더라도 새로운 렌더가 그 요청을 이어받도록 하는 것이다. 그리고 이 요청이 끝나면 쿼리 데이터가 바뀌게 되고, Promise가 reolve되어 React에서 retry(재시도)를 시작한다. 여기서 재시도는 리렌더와 다르고, 한 번도 커밋된 적이 없다면 사실상 처음부터 다시 마운트하는 것과 같다. 표로 한 번 살펴보자.
+[query-core/src/query.ts#L590-L609](https://github.com/TanStack/query/blob/fe053bf8e947cd869db91e10372bad3c41bc7b77/packages/query-core/src/query.ts#L590-L609) 코드를 보면 다시 렌더가 된다해도 몇 번이고 재요청하지 않도록, `retryer`로 이미 요청이 갔는지 확인하고 그 요청을 다시 돌려주고 있다. 이전 렌더가 버려지더라도 새로운 렌더가 그 요청을 이어받도록 하는 것이다. 그리고 이 요청이 끝나면 쿼리 데이터가 바뀌게 되고, Promise가 reolve되어 React에서 retry(재시도)를 시작한다. 여기서 재시도는 리렌더와 다르고, 한 번도 커밋된 적이 없다면 사실상 처음부터 다시 마운트하는 것과 같다. 표로 한 번 살펴보자.
 
 |                        | 리렌더                                             | 리마운트                                      | 재시도 (retry)                                                 |
 | ---------------------- | -------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------- |
@@ -150,7 +148,7 @@ export const ensureSuspenseTimers = (
 
 한 번 커밋된 뒤 다시 suspend되면 state는 유지된다. 이건 실험을 돌려서 console이 찍히는 것을 보는게 훨씬 직관적이었다. 실험은 따로 [별도의 레포](https://github.com/asyncwaiter/blog-experiment/blob/main/src/experiments/rerender-remount-retry/index.tsx)에 올려두었다. 그런데 또 궁금해지는게 있었다. 이렇게 렌더 중에도 하나의 요청으로 만들어 순수성을 지키는게 가능했으면 왜 `useQuery`에서는 이런 옵션을 주지 않은걸까 싶어 찾아봤다. 그랬더니 실제로 [해당 기능을 지원](https://github.com/TanStack/query/pull/7988/changes)하는 부분이 있었으나 2026년 8월에 [이를 없애는 PR](https://github.com/TanStack/query/pull/11221)이 올라왔다. 기존 논점에서 조금 벗어난 감이 있으나, 이를 이해하고 넘어가는게 앞으로 라이브러리 사용에 도움이 될 것 같아 한 번 살펴보고 가려한다.
 
-## useQuery는 왜 스스로 suspend하지 않을까
+## useQuery는 왜 suspend 옵션이 없는걸까
 
 이 기능은 `experimental_prefetchInRender`라고 불리는 기능이었으며, PR에 올라왔던 코드를 먼저 살펴보자.
 
@@ -164,10 +162,10 @@ const queryClient = new QueryClient({
 })
 
 import React from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { fetchTodos, type Todo } from './api'
+import {useQuery} from '@tanstack/react-query'
+import {fetchTodos, type Todo} from './api'
 
-function TodoList({ query }: { query: UseQueryResult<Todo[]> }) {
+function TodoList({query}: {query: UseQueryResult<Todo[]>}) {
   const data = React.use(query.promise)
 
   return (
@@ -180,7 +178,7 @@ function TodoList({ query }: { query: UseQueryResult<Todo[]> }) {
 }
 
 export function App() {
-  const query = useQuery({ queryKey: ['todos'], queryFn: fetchTodos })
+  const query = useQuery({queryKey: ['todos'], queryFn: fetchTodos})
 
   return (
     <>
@@ -193,11 +191,40 @@ export function App() {
 }
 ```
 
+```ts
+// useBaseQuery.ts
+ if (
+    defaultedOptions.experimental_prefetchInRender &&
+    !isServer &&
+    willFetch(result, isRestoring)
+  ) {
+    const promise = isNewCacheEntry
+      ? // Fetch immediately on render in order to ensure `.promise` is resolved even if the component is unmounted
+        fetchOptimistic(defaultedOptions, observer, errorResetBoundary)
+      : // subscribe to the "cache promise" so that we can finalize the currentThenable once data comes in
+        client.getQueryCache().get(defaultedOptions.queryHash)?.promise
+
+    promise?.catch(noop).finally(() => {
+      if (!observer.hasListeners()) {
+        // ...
+
+    // `.updateResult()` will trigger `.#currentThenable` to finalize
+    observer.updateResult()
+```
+
+여기서 오해하지 말아야했던 점이 `useQuery`는 Suspense 바깥에 있다는 점이다. 그래서 observer가 버려지지 않는다. Suspense 바깥에서 호출하고 이를 React의 `use`를 활용해 안쪽에서 값을 기다리게 만들고 있다. observer가 promise를 만들어 결과 객체에 넣어주고, 이를 `use`로 넘겨 `useSuspenseQuery`를 사용하는 것처럼 Promise가 렌더 중에 throw될 수 있도록 했다. 이 PR 예시에서는 데이터가 도착한 뒤 새로 구독하는 observer가 없어서 요청은 한 번이다. 하지만 같은 컴포넌트에서 `use`까지 호출하면 observer가 버려지고, 재시도 때 새 observer가 구독하면서 `staleTime` 0인 데이터를 다시 요청한다. `useQuery`에는 1초 보정이 없기 때문이다.
+
+그리고 이 기능은 올해 8월에 사라졌으나, 그 이유에 대해서는 PR에 명시되어있지 않았다. 메인테이너인 TkDodo는 삭제 전 [이슈 #9988](https://github.com/TanStack/query/issues/9988)에서, `useQuery`를 호출한 컴포넌트를 그대로 suspend시키는 방식이 너무 꼼수 같다(too hacky)고 이 실험 플래그를 없애야 한다고 미리 말한 적이 있다. 그러다 삭제 PR이 올라온 [비슷한 시기에 쓰인 글](https://tkdodo.eu/blog/reliable-query-prefetching-with-tanstack-router)을 발견했고, loader를 소개하는 글이고 `experimental_prefetchInRender` 직접 다루지는 않는데, 이상적인 요청을 어디서 시작할지에 대한 이야기라 관련 맥락으로 읽었다.
+
+> The takeaway here should be that a component should, if possible, probably never initiate data fetching on its own. Yes, it’s great in theory that you have a fully self-contained component that has its own data requirements and resolves them automatically when it renders. But in practice, if that’s the only place where we fetch, we are 1) doing this probably way later than we ideally should and 2) we can easily introduce fetch waterfalls (with or without suspense)
+
+결국 요약하자면, 컴포넌트는 가능하면 스스로 fetch를 시작하지 않는 편이 좋다는 것이다. 컴포넌트가 렌더될 때 필요한 데이터를 알아서 fetching하는 구조는 이론상 좋지만, 거기서만 fetch하면 이상적인 시점보다 훨씬 늦어지고, Suspense를 쓰든 안 쓰든 waterfall이 생기기 쉽다고 말하고 있다. `experimental_prefetchInRender` 또한 결국 컴포넌트가 렌더될 때 fetch되는 구조이니, 이 기능을 없앤 의도와 전하고자 하는 메세지가 크게는 다르지 않다고 읽혔다.
+
+여기서 말하는 이상적인 시점이 뭘까? 렌더 중에 fetch하면 커밋 이후의 단계보다 더 빨리 fetch되는 것인데 왜 이상적인 시점보다 느리다고 말하는 것일까? 그건 tkDodo는 이 이상적 시점을 애초에 렌더 전으로 보고 있기 때문이다. 결국 Supense 바깥에서 `useQuery`를 사용하고 이를 전달하던 방식이 이론상 문제없음에도 사라진 이유는, 렌더 전에 loader 사용이나 prefetch하는 방법이 이미 있고 그쪽이 더 빠르니 promise로 굳이 우회하는 방법을 남길 이유가 약했던 것이 아닐까 추측해본다. 지금까지 내가 가졌던 의문의 흐름에 대해 [굉장히 잘 정리된 자료](https://research.yceffort.kr/slides/why-usequery-cannot-suspend-itself)가 있다. 관심있는 분들은 확인해보시길 바란다.
+
 ## 왜 하필 1,000ms일까
 
-그런데 여기서 궁금한 점이 생긴다. React Query는 왜 Suspense에서 1초나 stale 판정을 지연시킨 걸까? `suspense.ts` 주석을 살펴보면 suspense 이후 컴포넌트가 remount 되었을 때 불필요한 refetch를 줄이기 위해서라고 한다.
-
-그럼에도 의문이 가시지 않는다. 왜 1,000ms가 불필요한 refetch를 줄여주는 걸까? 실제로 데이터 도착 시간을 300ms로 가정했을 때, 이게 바로 반영이 된다면 700ms는 꽤나 큰 차이이다. 데이터는 보통 1초보다 훨씬 빨리 도착하는데 왜 지연을 저만큼이나 둔 걸까? 만약 그냥 넉넉하게 둔 것이라면 `useQuery`는 왜 최소 시간을 1,000ms로 두지 않은 걸까? 그 이유는 [React PR #26611](https://github.com/react/react/pull/26611)에서 확인할 수 있었다.
+그리고 다시 앞에서 미뤄둔, 왜 하필 1초일까에 대한 맥락으로 Suspense의 throttle 매커니즘에 대해 말해보려한다. [React PR #26611](https://github.com/react/react/pull/26611) 코드를 살펴보겠다.
 
 > If a Suspense fallback is shown, and the data finishes loading really quickly after that, we throttle the content from appearing for 500ms to reduce thrash.
 >
@@ -205,15 +232,13 @@ export function App() {
 >
 > This fixes the throttling behavior so that it applies to all renders that are the result of suspended data being loaded. (Our internal jargon term for this is a "retry".)
 
-이 PR 내용을 요약하자면, Suspense에서 fallback이 화면에 보여지고 요청한 데이터를 화면에 반영하기까지 500ms throttle을 발생시킨다는 것이다. 그런데 마지막 시퀀스에서는 throttle이 발생하지 않았고, 이번 작업으로 모든 커밋에 마지막까지 throttle을 발생시킨다는 게 주된 내용이다.
+이 PR 내용을 요약하자면, Suspense에서 fallback이 화면에 보여지고 요청한 데이터를 화면에 반영하기까지 500ms throttle을 발생시킨다는 것이다. 그런데 마지막 시퀀스에서는 throttle이 발생하지 않았고, 이번 작업으로 suspended data가 도착하고 난 후 마지막 retry까지 throttle을 발생시킨다는 게 주된 내용이다.
 
-즉 React에서 애초에 Suspense 안에서 직전 커밋부터 throttle을 500ms 줘버리니까, 이게 mount될 때쯤이면 데이터가 도착한 시간보다 더 오래 걸리게 된다. 최악의 상황에서 400ms, 523ms에 데이터들이 도착하면 반영되기까지 밀려서 throttle 500ms가 추가되어 버릴 수 있으니, React Query에서는 이를 고려해 1초 정도를 stale하게 판정한 것으로 보인다. 안 그러면 UI에 반영되기도 전에 두 번이나 fetch될 수 있으니 말이다.
+즉 React Suspense는 직전 커밋부터 throttle을 500ms 줘버리니까, 이게 mount될 때쯤이면 데이터가 도착한 시간보다 더 오래 걸리게 된다. 최악의 상황에서 400ms, 523ms에 데이터들이 도착하면 반영되기까지 밀려서 throttle 500ms가 추가되어 버릴 수 있으니, 데이터가 도착하고도 마운트까지 수백 ms가 더 걸릴 수 있다. 명시적으로 쓰여 있진 않았으나 1초라는 숫자가 지금까지의 모든 맥락을 고려한 값이 아닐까 추측해봤다. 안 그러면 UI에 반영되기도 전에 두 번이나 fetch될 수 있으니 말이다.
 
 ## throttle은 무엇을 막으려는 걸까
 
-그런데 React에서는 왜 데이터를 바로 UI에 반영하지 않고 이런 작업을 하는 걸까? 데이터는 빨리 보여줄수록 좋지 않나? 본문에서는 이를 thrashing을 줄이기 위해서라고 말한다.
-
-처음에 이 PR을 읽었을 때, 어떤 thrashing이 발생하는 것일지 와닿지 않았다. 결국 data를 UI에 반영하기까지의 문제인데, 어떤 thrash를 줄이려고 한 걸까? 너무 요청이 많아서? 혹은 fallback을 보여주고 있으니 양보하고 더 급한 작업들을 처리하기 위해서? PR 코드를 보고 힌트를 얻었다.
+그런데 React에서는 왜 데이터를 바로 UI에 반영하지 않고 이런 작업을 하는 걸까? 데이터는 빨리 보여줄수록 좋지 않나? 본문에서는 이를 thrashing을 줄이기 위해서라고 말한다. 처음에 이 PR을 읽었을 때, 어떤 thrashing이 발생하는 것일지 와닿지 않았다. 결국 data를 UI에 반영하기까지의 문제인데, 어떤 thrash를 줄이려고 한 걸까? 너무 요청이 많아서? 혹은 fallback을 보여주고 있으니 양보하고 더 급한 작업들을 처리하기 위해서? PR 코드를 보고 힌트를 얻었다.
 
 주석을 보면, 너무 많은 로딩들이 빠르게 보였다 사라졌다 하는 것을 방지하기 위해서라고 한다. 예를 들어 여러 개의 Suspense가 존재할 때, 만약 throttle이 없다면 데이터가 오는 대로 화면에 반영할 것이다. 그러다 보면 loading fallback이 각각 보였다 사라졌다 버벅거리는 느낌이 나게 된다. 실제로 확인해보기 위해 샌드박스 실험을 또 돌려봤다.
 
@@ -293,9 +318,9 @@ Suspense를 차례대로 형제, 중첩, 적용하지 않았을 때를 테스트
 
 Sibling과 Nested에서 매 커밋마다 throttle이 적용되어 reveal되고 있음을 알 수 있다. Suspense를 쓰지 않은 Baseline은 데이터가 도착하자마자 1ms 안에 반영됐다.
 
-그런데 수치 값에서 reveal의 간격이 위 PR과 다른 결과를 확인할 수 있었다. PR에서는 throttle이 500ms였으나, 실제 실험에서는 노출이 308ms, 608ms, 908ms로 300ms 단위로 되고 있었다. 값이 변경된 것일까? 그럼 또 500ms에서 300ms로 throttle 시간을 변경시킨 이유는 무엇일까? PR을 뒤져봤다.
+## 500ms는 왜 300ms가 되었을까
 
-[찾은 PR #26803](https://github.com/react/react/pull/26803)의 설명을 보니 왜 throttling을 적용한 것인지 이유가 명확해졌다.
+그런데 수치 값에서 reveal의 간격이 위 PR과 다른 결과를 확인할 수 있었다. PR에서는 throttle이 500ms였으나, 실제 실험에서는 노출이 308ms, 608ms, 908ms로 300ms 단위로 되고 있었다. 값이 변경된 것일까? 그럼 또 500ms에서 300ms로 throttle 시간을 변경시킨 이유는 무엇일까? PR을 뒤져봤고, [찾은 PR #26803](https://github.com/react/react/pull/26803)의 설명을 보니 왜 throttling을 적용한 것인지 이유가 좀 더 명확해졌다.
 
 > Now that the throttling mechanism applies more often, we've decided to lower this a tad to ensure it's not noticeable. The idea is it should be just large enough to prevent jank when lots of different parts of the UI load in rapid succession, but not large enough to make the UI feel sluggish. There's no perfect number, it's just a heuristic.
 
@@ -307,11 +332,17 @@ Sibling과 Nested에서 매 커밋마다 throttle이 적용되어 reveal되고 �
 
 그런데 이 메커니즘을 이해하면서 헷갈리는 부분이 있었는데, 문제로 확인해보자.
 
-만약 데이터 도착이 100ms이면 언제 reveal될까? 정답은 300ms이다. fallback 커밋 이후 throttle이 발생했기 때문이다.
+1. 만약 데이터 도착이 100ms이면 언제 reveal될까?
 
-그럼 데이터가 324ms에 도착한다면 언제 reveal될까? 324ms에 reveal된다. 이 부분이 조금 헷갈렸던 부분인데, 이유는 fallback 커밋 이후의 throttle은 끝이 났고 새로운 커밋이 없었기 때문이다.
+   정답은 300ms이다. fallback 커밋 이후 throttle이 발생했기 때문이다.
 
-마지막으로 데이터가 100ms, 324ms에 도착한다. 각각 언제 reveal될까? 300ms, 600ms가 될 것이다. 이유는 300ms에 커밋이 되었고, throttle이 발생했기 때문이다.
+2. 그럼 데이터가 324ms에 도착한다면 언제 reveal될까?
+
+   324ms에 reveal된다. 이 부분이 조금 헷갈렸던 부분인데, 이유는 fallback 커밋 이후의 throttle은 끝이 났고 새로운 커밋이 없었기 때문이다.
+
+3. 마지막으로 데이터가 100ms, 324ms에 도착한다. 각각 언제 reveal될까?
+
+   300ms, 600ms가 될 것이다. 이유는 300ms에 커밋이 되었고, throttle이 발생했기 때문이다.
 
 관련 PR 코드는 아래에서 확인해볼 수 있다. 지금의 main과는 함수의 파라미터들이 더 추가된 부분들이 좀 다르긴 하지만 핵심 플로우는 동일하다.
 
@@ -336,6 +367,8 @@ if (includesOnlyRetries(lanes)) {
     // The render is suspended, it hasn't timed out, and there's no
     // lower priority work to do. Instead of committing the fallback
     // immediately, wait for more data to arrive.
+    // TODO: Combine retry throttling with Suspensey commits. Right now they
+    // run one after the other.
     root.timeoutHandle = scheduleTimeout(
       commitRootWhenReady.bind(
         null,
@@ -363,6 +396,4 @@ commitRootWhenReady(
 
 ## 마치며
 
-이렇게 `staleTime`에서 시작해 React의 Suspense 렌더링 동작까지 알아보았다. 이 모든 것들을 제대로 알고 있어야, [지난 글](/2026/10/rendering-boundary-server-functions)에서 고민했었던 `staleTime`에 대해 제대로 정할 수 있겠구나 싶었다.
-
-`staleTime`은 그냥 예측으로 정하는 캐싱 시간 정도라 생각했는데, 사실 이건 서버에서 데이터가 오고 나서 화면에 마운트되기까지의 간격을 파악하는 일이었다. 물론 앞선 throttling time PR이나 React Query 최소 `staleTime`에서처럼 완벽한 숫자는 없고 휴리스틱한 숫자겠지만, 지금 내 프로젝트의 번들 크기, 주로 사용되는 기기, 국가 환경에 따라 알맞게 설정한다면 네트워크 요청을 최적화할 수 있는 방법이 되기 때문이다.
+이렇게 `staleTime`에서 시작해 React의 Suspense 렌더링 동작 과정까지 알아보았다. 결국 suspend된 컴포넌트는 아무것도 남지 않는다는 이 핵심을 제대로 알고 있어야 `staleTime`에 얽혀있는 고민들과 추가로 이어진 의문에 대해 제대로 답할 수 있었다. retry가 리마운트, 리렌더와 무엇이 다른지 고민했던 것도, 최소 staleTime이 왜 필요한지 고민했던 것도 전부 이 한 가지를 제대로 몰라서였다. 내가 쓰는 것에 대한 동작 원리를 제대로 아는 것은 더 많은 맥락을 보는데 너무 중요하다. 지금의 시간들이 훗날 중요한 판단을 위한 레이어로 꾸준히 쌓여가길.

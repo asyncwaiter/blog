@@ -1,5 +1,5 @@
 ---
-title: "Is React Query's staleTime: 0 really 0?"
+title: "Is React Query's staleTime: 0 really 0? And why?"
 tags:
   - react
   - state-management
@@ -7,7 +7,7 @@ tags:
   - debugging
 published: true
 date: 2026-10-03 21:00:00
-description: 'I prefetched the data and hydrated it, and 30 runs in dev mode still logged 60 requests. The conclusion from my last post, that staleTime 0 was the cause, was wrong. React Query raises staleTime to a 1,000ms floor in Suspense, and that number exists because React throttles reveals by 300ms after the fallback commit. In my experiment, content was revealed at 308ms, 608ms and 908ms.'
+description: 'I prefetched the data and even hydrated it, and queryFn was still called twice. In the last post I explained that as staleTime being 0, and the explanation was not right. In Suspense mode staleTime is clamped to a minimum of 1,000ms. This post follows why that floor is needed and why one second of all numbers, through the internals of React Query and React. The clues were that a suspended render leaves nothing behind, and the 300ms throttle in Suspense.'
 art:
   undraw: alarm-clock
   hue: cyan
@@ -68,9 +68,9 @@ export default async function Page() {
 
 It prefetches in SSR and hydrates that, so it feels like the answer should be once. But in the `hydrated-stale` experiment from [the previous post](/en/2026/10/rendering-boundary-server-functions), running this code 30 times in dev mode logged 60 requests. `queryFn` was called twice per run.
 
-Why twice? In the previous post I explained the doubling as `staleTime` being 0, and that explanation was not right. Let us look at React Query's `staleTime` internals to see why.
+Why twice? In the previous post I explained the doubling as `staleTime` being 0, and that explanation was not right. In Suspense mode `staleTime` is not 0, it is clamped to a floor of 1,000ms, one second. Let us confirm that in React Query's internals.
 
-## staleTime 0 is not 0
+## staleTime 0 is not 0 in Suspense mode
 
 Looking at `suspense.ts` in `@tanstack/react-query@5.103.3`, `staleTime` in Suspense is not actually 0. Even when you pass 0, it is handled as a minimum of 1,000ms.
 
@@ -98,33 +98,133 @@ export const ensureSuspenseTimers = (
 }
 ```
 
-So the reason the test produced twice the network requests is that more than a second had passed since the data arrived. To be sure, I added a step that logs the difference between `dataUpdatedAt`, set when it was prefetched in SSR, and `Date.now()` after mounting in the browser, and ran it again.
+So the reason the test produced twice the network requests is not that more than 0 seconds had passed since the data arrived, but that more than one second had. There are three things here that puzzled me, and I want to dig into them.
+
+1. Why is the floor set to one second?
+2. Where and how is this gap measured?
+3. What created that one second in my own environment?
+
+## Why a floor was needed
+
+Let us start with the first one. Why did the React Query team clamp `staleTime` to a minimum of one second in Suspense mode? The reason a floor is needed at all is written in a comment. The comment in the code above says it is there to prevent unnecessary refetching when a component remounts after suspending. Why one second of all numbers is not clearly spelled out, so I will come back to it later and make a guess from Suspense's throttle.
+
+Let me restate the situation that comment describes. `useSuspenseQuery` starts the fetch during render and suspends. The render that was in progress is thrown away, and the observer created inside it disappears along with it. Then once the data has arrived, the retry creates a new observer that subscribes for the first time. So in the end, unlike `useQuery`, the data has already arrived by the time it subscribes. The stale judgement happens at that subscription, so with `staleTime` 0, more than zero has passed since the data arrived, the query is judged stale no matter what, and the network call goes out again. The floor is there to stop that.
+
+But React components are supposed to be pure. They should produce the same result however many times they render, which means no side effects during render. And Suspense mode fetches during render. Strictly speaking that breaks the rule, so why does nothing go wrong? I went to the code.
 
 ```ts
-useEffect(() => {
-  const state = queryClient.getQueryState(options.queryKey)
-  logMountDataAge(scenario, state?.dataUpdatedAt)
-}, [])
+  async fetch(
+    options?: QueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+    fetchOptions?: FetchOptions<TQueryFnData>,
+  ): Promise<TData> {
+    if (
+      this.state.fetchStatus !== 'idle' &&
+      // If the promise in the retryer is already rejected, we have to definitely
+      // re-start the fetch; there is a chance that the query is still in a
+      // pending state when that happens
+      this.#retryer?.status() !== 'rejected'
+    ) {
+      if (this.state.data !== undefined && fetchOptions?.cancelRefetch) {
+        // Silently cancel current fetch if the user wants to cancel refetch
+        this.cancel({ silent: true })
+      } else if (this.#retryer) {
+        // make sure that retries that were potentially cancelled due to unmounts can continue
+        this.#retryer.continueRetry()
+        // Return current promise if we are already fetching
+        return this.#retryer.promise
+      }
 ```
 
-The last column is the age of the data at the remount (`Date.now() - dataUpdatedAt`).
+[query-core/src/query.ts#L590-L609](https://github.com/TanStack/query/blob/fe053bf8e947cd869db91e10372bad3c41bc7b77/packages/query-core/src/query.ts#L590-L609) The code uses the `retryer` to check whether a request has already gone out and hands that same request back, so a repeated render does not fire the request again and again. Even when the previous render is thrown away, the new render picks up that request. When the request finishes, the query data changes, the promise resolves, and React starts a retry. A retry is not a re-render: if the component has never been committed, it is effectively mounting from scratch. Let us put that in a table.
 
-| Scenario         | Request sequence | Median refetch | p95 refetch | Median data age at remount |
-| ---------------- | ---------------- | -------------: | ----------: | -------------------------: |
-| `hydrated-stale` | ssr-direct → bff |        355.0ms |     371.0ms |                  1,181.5ms |
-| `hydrated-fresh` | ssr-direct only  |     no refetch |           — |                  1,180.0ms |
+|                            | Re-render                                                                           | Remount                                             | Retry                                                                                           |
+| -------------------------- | ----------------------------------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| When it happens            | A state change, a parent re-render, a notification from a subscribed external store | When the key or the component type changes          | When the promise that caused the suspend resolves                                               |
+| State just before          | Mounted and on screen                                                               | Mounted and on screen                               | Never committed (the fallback is on screen instead)                                             |
+| Fiber                      | Carried over as is                                                                  | The old one is dropped and a new one is built       | Nothing was stored, so a new one is built                                                       |
+| useState initializer       | Not run                                                                             | Run again                                           | Run again                                                                                       |
+| Cleanup of earlier effects | Only effects whose dependencies changed                                             | All of them run                                     | Nothing to run (no effect ever ran)                                                             |
+| React Query's observer     | The same observer is kept                                                           | The old observer unsubscribes, a new one subscribes | The first observer disappears without ever subscribing, a new one subscribes for the first time |
 
-As expected, the result was over 1,000ms. That is why it was judged stale and the request went out twice.
+Once it has been committed, state survives a later suspend. Running the experiment and watching the console was a far more intuitive way to see this, and I put the experiment in [a separate repo](https://github.com/asyncwaiter/blog-experiment/blob/main/src/experiments/rerender-remount-retry/index.tsx). That left me with another question. If purity can be kept during render by folding everything into a single request, why does `useQuery` not offer the same option? It turns out [the feature did exist](https://github.com/TanStack/query/pull/7988/changes), but a [PR removing it](https://github.com/TanStack/query/pull/11221) landed in August 2026. It is a bit of a detour from the main thread, but going through it seemed useful for working with the library, so I want to take a look.
 
-But that one-second gap was created by the environment, not by the code. This experiment was in dev mode, which is why it took more than a second; running it in prod mode, where the bundle is optimized, load and hydration finish fast enough to land inside 1,000ms, and the second request does not happen.
+## Why useQuery has no suspend option
 
-Of course, even in prod mode a low-end device or network can take far longer than a second to load and hydrate, so a refetch can still occur. So the answer to the first question is "it could be once, it could be twice."
+The feature was called `experimental_prefetchInRender`. Let us look at the code from the PR first.
+
+```tsx
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      experimental_prefetchInRender: true,
+    },
+  },
+})
+
+import React from 'react'
+import {useQuery} from '@tanstack/react-query'
+import {fetchTodos, type Todo} from './api'
+
+function TodoList({query}: {query: UseQueryResult<Todo[]>}) {
+  const data = React.use(query.promise)
+
+  return (
+    <ul>
+      {data.map((todo) => (
+        <li key={todo.id}>{todo.title}</li>
+      ))}
+    </ul>
+  )
+}
+
+export function App() {
+  const query = useQuery({queryKey: ['todos'], queryFn: fetchTodos})
+
+  return (
+    <>
+      <h1>Todos</h1>
+      <React.Suspense fallback={<div>Loading...</div>}>
+        <TodoList query={query} />
+      </React.Suspense>
+    </>
+  )
+}
+```
+
+```ts
+// useBaseQuery.ts
+ if (
+    defaultedOptions.experimental_prefetchInRender &&
+    !isServer &&
+    willFetch(result, isRestoring)
+  ) {
+    const promise = isNewCacheEntry
+      ? // Fetch immediately on render in order to ensure `.promise` is resolved even if the component is unmounted
+        fetchOptimistic(defaultedOptions, observer, errorResetBoundary)
+      : // subscribe to the "cache promise" so that we can finalize the currentThenable once data comes in
+        client.getQueryCache().get(defaultedOptions.queryHash)?.promise
+
+    promise?.catch(noop).finally(() => {
+      if (!observer.hasListeners()) {
+        // ...
+
+    // `.updateResult()` will trigger `.#currentThenable` to finalize
+    observer.updateResult()
+```
+
+The thing not to get wrong here is that `useQuery` sits outside Suspense, so its observer is never thrown away. It is called outside the boundary, and React's `use` is what makes the value awaited inside. The observer builds a promise and puts it on the result object, and handing that to `use` lets the promise be thrown during render, as if you were using `useSuspenseQuery`. In this PR example no observer subscribes after the data arrives, so there is a single request. But call `use` in the same component and the observer is thrown away, and on the retry a new observer subscribes and requests the `staleTime` 0 data again, because `useQuery` has no one second correction.
+
+The feature was dropped this August, and the PR does not say why. Before the removal, the maintainer TkDodo had already said in [issue #9988](https://github.com/TanStack/query/issues/9988) that suspending the very component that called `useQuery` felt too hacky and that the experimental flag should go. I then found [a post written around the same time](https://tkdodo.eu/blog/reliable-query-prefetching-with-tanstack-router) as the removal PR. It introduces loaders and does not address `experimental_prefetchInRender` directly, but it is about where an ideal request should start, so I read it as related context.
+
+> The takeaway here should be that a component should, if possible, probably never initiate data fetching on its own. Yes, it’s great in theory that you have a fully self-contained component that has its own data requirements and resolves them automatically when it renders. But in practice, if that’s the only place where we fetch, we are 1) doing this probably way later than we ideally should and 2) we can easily introduce fetch waterfalls (with or without suspense)
+
+To put it short, a component is better off not starting a fetch on its own. A structure where a component works out the data it needs as it renders is nice in theory, but if that is the only place you fetch, you end up far later than you ideally would, and waterfalls are easy to introduce whether or not Suspense is involved. `experimental_prefetchInRender` is also a structure that fetches when the component renders, so the intent behind removing it did not read as far from that message.
+
+What is this ideal moment? Fetching during render is earlier than anything after the commit, so why call it later than ideal? Because tkDodo places that ideal moment before the render in the first place. So my guess is that calling `useQuery` outside Suspense and passing the result down disappeared, even though it works in theory, because loaders and prefetching before the render already exist and are faster, which left little reason to keep a detour through a promise. There is [a very well put together deck](https://research.yceffort.kr/slides/why-usequery-cannot-suspend-itself) that follows the same line of questions I had. If you are curious, take a look.
 
 ## Why 1,000ms of all numbers
 
-That raises a question. Why did React Query delay the stale judgement by a whole second in Suspense? The comment in `suspense.ts` says it is to reduce unnecessary refetching when a component remounts after suspending.
-
-Still, the doubt did not go away. Why does 1,000ms reduce unnecessary refetching? If data arrives at 300ms and that is reflected immediately, 700ms is a fairly big difference. Data usually arrives much faster than a second, so why leave that much delay? And if it is just generous padding, why does `useQuery` not use a 1,000ms floor too? I found the reason in [React PR #26611](https://github.com/react/react/pull/26611).
+Back to the question I set aside, why one second, I want to talk about Suspense's throttle mechanism. Let us look at the code in [React PR #26611](https://github.com/react/react/pull/26611).
 
 > If a Suspense fallback is shown, and the data finishes loading really quickly after that, we throttle the content from appearing for 500ms to reduce thrash.
 >
@@ -132,15 +232,13 @@ Still, the doubt did not go away. Why does 1,000ms reduce unnecessary refetching
 >
 > This fixes the throttling behavior so that it applies to all renders that are the result of suspended data being loaded. (Our internal jargon term for this is a "retry".)
 
-To summarize the PR: inside Suspense, from the moment the fallback is shown until the requested data is reflected on screen, React throttles by 500ms. That throttle was not applied to the last step in the sequence, and this change applies it through to every commit.
+To summarize the PR: inside Suspense, from the moment the fallback is shown until the requested data is reflected on screen, React throttles by 500ms. That throttle was not applied to the last step in the sequence, and this change applies it through to the final retry after the suspended data arrives.
 
-So React already throttles by 500ms from the previous commit inside Suspense, which means that by the time it mounts, it takes longer than the moment the data arrived. In the worst case, data arriving at 400ms and 523ms can be pushed back with an extra 500ms of throttle, so React Query appears to have settled on about a second for the stale judgement. Otherwise a query could be fetched twice before it even reaches the UI.
+So React Suspense throttles by 500ms from the previous commit, which means that by the time it mounts, more time has gone by than the moment the data arrived. In the worst case, data arriving at 400ms and 523ms gets pushed back with an extra 500ms of throttle, so mounting can take several hundred more ms even after the data is there. It is not written down anywhere, but I would guess the one second is a number that accounts for all of the context up to this point. Otherwise a query could be fetched twice before it even reaches the UI.
 
 ## What is the throttle trying to prevent?
 
-But why does React not reflect the data in the UI immediately? Is faster not better? The PR says it is to reduce thrashing.
-
-When I first read the PR, I could not picture what thrashing would occur. It is a question of getting data into the UI, so what thrash is being reduced? Too many requests? Or yielding while a fallback is shown so more urgent work can run? The PR code gave me a hint.
+But why does React not reflect the data in the UI immediately? Is faster not better? The PR says it is to reduce thrashing. When I first read the PR, I could not picture what thrashing would occur. It is a question of getting data into the UI, so what thrash is being reduced? Too many requests? Or yielding while a fallback is shown so more urgent work can run? The PR code gave me a hint.
 
 The comment says it is to prevent too many loading states from appearing and disappearing too quickly. Say there are several Suspense boundaries. Without throttling, content would be reflected as the data arrives, and the loading fallbacks would flicker in and out one by one. I ran another sandbox experiment to see it.
 
@@ -220,9 +318,9 @@ This tests Suspense as siblings, nested, and not applied at all. Boundary delays
 
 In Sibling and Nested you can see the throttle applied at every commit before the reveal. The Baseline, without Suspense, reflected the data within 1ms of arrival.
 
-But the reveal intervals in the numbers differed from the PR. The PR said the throttle was 500ms, while in the actual experiment reveals landed at 308ms, 608ms and 908ms, in 300ms steps. Had the value changed? And why lower the throttle from 500ms to 300ms? I dug through the PRs.
+## Why 500ms became 300ms
 
-[The PR I found, #26803](https://github.com/react/react/pull/26803), made the reason for throttling clear.
+But the reveal intervals in the numbers differed from the PR. The PR said the throttle was 500ms, while in the actual experiment reveals landed at 308ms, 608ms and 908ms, in 300ms steps. Had the value changed? And why lower the throttle from 500ms to 300ms? I dug through the PRs, and the explanation in [the PR I found, #26803](https://github.com/react/react/pull/26803), made the reason for throttling a little clearer.
 
 > Now that the throttling mechanism applies more often, we've decided to lower this a tad to ensure it's not noticeable. The idea is it should be just large enough to prevent jank when lots of different parts of the UI load in rapid succession, but not large enough to make the UI feel sluggish. There's no perfect number, it's just a heuristic.
 
@@ -234,11 +332,14 @@ As for the number 300: because there is no perfect magic number, they settled on
 
 While working through this mechanism there was a part that confused me, so let us check it as a quiz.
 
-If the data arrives at 100ms, when is it revealed? The answer is 300ms, because the throttle started after the fallback commit.
+1. If the data arrives at 100ms, when is it revealed?
+   The answer is 300ms, because the throttle started after the fallback commit.
 
-Then if the data arrives at 324ms, when is it revealed? At 324ms. This was the confusing part, and the reason is that the throttle from the fallback commit has ended and there was no new commit.
+2. Then if the data arrives at 324ms, when is it revealed?
+   At 324ms. This was the confusing part, and the reason is that the throttle from the fallback commit has ended and there was no new commit.
 
-Finally, data arrives at 100ms and 324ms. When is each revealed? At 300ms and 600ms, because a commit happened at 300ms and the throttle started again.
+3. Finally, the data arrives at 100ms and 324ms. When is each revealed?
+   At 300ms and 600ms, because a commit happened at 300ms and the throttle started again.
 
 You can see the related PR code below. The current main has a few more parameters on the functions, but the core flow is the same.
 
@@ -263,6 +364,8 @@ if (includesOnlyRetries(lanes)) {
     // The render is suspended, it hasn't timed out, and there's no
     // lower priority work to do. Instead of committing the fallback
     // immediately, wait for more data to arrive.
+    // TODO: Combine retry throttling with Suspensey commits. Right now they
+    // run one after the other.
     root.timeoutHandle = scheduleTimeout(
       commitRootWhenReady.bind(
         null,
@@ -290,6 +393,4 @@ commitRootWhenReady(
 
 ## Closing
 
-So, starting from `staleTime`, I ended up looking at how React's Suspense rendering works. I came to think you need to know all of this properly before you can set `staleTime` properly, which is what I was wondering about in [the last post](/en/2026/10/rendering-boundary-server-functions).
-
-I used to think `staleTime` was just a cache duration you guess at, but it is really about understanding the gap between the data arriving from the server and the component mounting on screen. Of course, as with the throttling time PR and React Query's minimum `staleTime`, there is no perfect number and it stays a heuristic. Still, setting it to match my project's bundle size, the devices people actually use, and the country they are in makes it a way to cut network requests.
+So, starting from `staleTime`, I ended up walking through how React's Suspense rendering works. In the end, a suspended component leaves nothing behind, and knowing that properly is what let me answer the questions tangled up with `staleTime` and the ones that followed from it. Wondering how a retry differs from a remount and a re-render, and wondering why a minimum `staleTime` is needed at all, both came down to not understanding that one thing properly. Knowing how the things I use actually work matters more than I thought for seeing the wider context. I hope the hours I am putting in now keep stacking up as a layer for the decisions that matter later.
