@@ -75,11 +75,11 @@
   .post-article blockquote {
     margin: 24px 0;
     padding: 14px 22px;
-    border-left: 3px solid var(--primary);
+    border-left: 3px solid var(--ink-3);
     border-radius: 0 10px 10px 0;
     background-attachment: scroll;
     background-clip: border-box;
-    background-color: var(--primary);
+    background-color: var(--surface-2);
     background-image: none;
     background-repeat: repeat;
     background-position: initial;
@@ -247,7 +247,7 @@
     font-family: var(--font-mono), monospace;
     font-size: 0.87em;
     word-break: break-word;
-    color: var(--ink);
+    color: var(--ink-2);
     background-origin: padding-box;
   }
   .post-article a > code {
@@ -414,7 +414,8 @@
   }
   .post-article a {
     text-decoration: underline;
-    color: var(--primary);
+    color: var(--ink);
+    text-decoration-color: var(--ink-4);
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
   }
@@ -497,7 +498,8 @@
     color: var(--primary-2);
   }
   .post-article a:hover {
-    color: var(--primary-2);
+    color: var(--ink);
+    text-decoration-color: var(--ink-2);
   }
   .post-footer a:hover {
     color: var(--primary-2);
@@ -645,8 +647,8 @@
 @supports (color: color-mix(in lab, red, red)) {
   @layer site {
     .post-article :not(pre) > code {
-      border-color: color-mix(in oklab, var(--primary) 22%, var(--border));
-      background-color: color-mix(in oklab, var(--primary) 10%, var(--surface));
+      border-color: color-mix(in oklab, var(--ink-4) 35%, var(--border));
+      background-color: color-mix(in oklab, var(--ink-4) 14%, var(--surface));
     }
     .series-endnav-card.empty {
       border-color: currentColor;
@@ -662,7 +664,7 @@
     .post-article blockquote {
       background-attachment: scroll;
       background-clip: border-box;
-      background-color: color-mix(in oklab, var(--primary) 6%, var(--surface));
+      background-color: color-mix(in oklab, var(--ink-4) 22%, var(--surface));
       background-image: none;
       background-repeat: repeat;
       background-position: initial;
