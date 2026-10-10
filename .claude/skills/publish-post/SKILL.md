@@ -8,7 +8,12 @@ argument-hint: <apps/blog/posts/YYYY/MM/slug.md>
 
 대상: `$ARGUMENTS`. 비어 있으면 `published: false`인 글 중 가장 최근 수정된 것을 후보로 제시하고 사용자에게 확인받는다.
 
-순서가 중요하다. 영문본을 먼저 만들어야 태그와 썸네일 스크립트가 영문본에도 같은 값을 쓴다.
+순서가 중요하다. 영문본을 먼저 만들어야 태그와 썸네일이 영문본에도 같은 값으로 들어간다.
+
+**API 키는 쓰지 않는다.** `TYPESAFE_API_KEY`, `ANTHROPIC_API_KEY`를 `.env.local`에 두지
+않기로 했다(값이 비어 있는 건 실수가 아니다). 태그, 관련 글, unDraw 이름을 "고르는" 판단은
+전부 Claude Code가 직접 한다. 스크립트는 키가 필요 없는 부분(SVG 렌더링, 파일 쓰기, 검사)에만
+쓴다. 키가 없다고 멈추거나 사용자에게 키를 요청하지 않는다.
 
 ## 1. 사전 점검
 
@@ -31,11 +36,12 @@ argument-hint: <apps/blog/posts/YYYY/MM/slug.md>
 
 ## 3. 태그
 
-```bash
-node apps/blog/scripts/retag-posts.mjs <파일> --apply
-```
+`retag-posts.mjs`는 `TYPESAFE_API_KEY`가 필요하므로 쓰지 않는다. `apps/blog/data/tag-vocabulary.json`의
+설명문을 읽고 Claude Code가 직접 고른다.
 
-`tag-vocabulary.json` 어휘 안에서 Jev가 고르고 영문본에도 같은 태그를 쓴다. 먼저 `--apply` 없이 미리보기를 보여 줘도 된다. 어휘에 맞는 태그가 없다고 나오면 `propose-tags.mjs`로 제안받아 사용자와 정한다.
+- 어휘에 **없는** 태그는 만들지 않는다. 맞는 게 없으면 `propose-tags.mjs` 대신 사용자와 정한다.
+- 한국어본과 영문본 frontmatter에 같은 태그를 쓴다.
+- 최근 글이 어떤 태그를 썼는지 `grep -rhA6 '^tags:' apps/blog/posts/<최근 월>`로 참고한다.
 
 ## 4. 썸네일 (unDraw)
 
@@ -43,19 +49,38 @@ node apps/blog/scripts/retag-posts.mjs <파일> --apply
 node apps/blog/scripts/generate-undraw-thumbnail.mjs <파일>
 ```
 
-frontmatter `art.undraw`를 고르고 `apps/blog/public/thumbnails/{slug}.webp`를 만든다. `generate-thumbnail.mjs`(Gemini)와 `generate-art-spec.mjs`는 쓰지 않는다.
+`art.undraw`가 frontmatter에 **이미 있으면 이 스크립트는 API를 타지 않고** SVG만 렌더해
+`apps/blog/public/thumbnails/{slug}.webp`를 만든다. 그러니 이름은 Claude Code가 먼저 고르고
+한국어본·영문본 frontmatter에 `art:\n  undraw: <이름>\n  hue: <색>`을 넣은 뒤 위 명령을 돌린다.
+이름 없이 돌리면 `ANTHROPIC_API_KEY`를 찾다가 실패한다. `generate-thumbnail.mjs`(Gemini)와
+`generate-art-spec.mjs`는 쓰지 않는다.
 
 - 만든 webp를 png로 바꿔 직접 열어 보고 확인한다(`sharp(webp).png().toFile(...)`).
 - **사람이 들어간 그림은 쓰지 않는다.** 카탈로그 필터(피부색 fill)를 통과한 이름이라도 사람 실루엣이 새어 나올 수 있다.
-- Anthropic API 오류(키 무효 등)로 고르지 못하면, 사람 없는 카탈로그에서 직접 고른다. 한국어본과 영문본 frontmatter에 `art:\n  undraw: <이름>`을 넣고 같은 명령을 다시 실행하면 API 없이 렌더링한다. 사람 없는 이름 목록은 스크립트의 `PEOPLE_NAME`, `SKIN` 필터를 `node_modules/undraw-svg/svgs`에 적용해 뽑는다.
+- 고를 수 있는 이름은 스크립트의 `PEOPLE_NAME`, `SKIN` 필터를 `node_modules/undraw-svg/svgs`에 적용해 뽑는다.
 - 최근 글들과 같은 이름이 겹치지 않게 한다(`grep -rh "undraw:" apps/blog/posts/<최근 월>`).
 
-## 5. 검증
+## 5. 관련 글
+
+`generate-related-posts.mjs`도 `TYPESAFE_API_KEY`가 필요하므로 쓰지 않는다. 커밋 훅
+(`lefthook.yml`의 `related-posts`)은 돌다가 `관련 글 갱신 실패. 태그 방식으로 폴백됩니다.`를
+출력하는데, **이건 정상이고 커밋을 막지 않는다.**
+
+대신 Claude Code가 `apps/blog/data/related-posts.json`에 직접 적는다. 형식은
+`{"ko": {"<slug>": [{"slug": "...", "score": 0.0}, ...]}, "en": {...}}`이고, score 내림차순
+최대 8편이다. `score`는 0~1 사이로 직접 매긴다.
+
+- 비워 두면 `getRelatedPosts`가 태그 겹침으로 폴백한다([Post.ts](apps/blog/src/utils/Post.ts)).
+  태그만으로 충분한 글은 손대지 않아도 된다.
+- 적을 때는 ko/en 양쪽에 같은 글 목록을 넣는다(영문본이 있는 글만).
+- `related-scores.json`은 스크립트 캐시이므로 손대지 않는다.
+
+## 6. 검증
 
 - 커밋 훅과 같은 검사를 돌린다: `npx lefthook run pre-commit --file <한국어본> --file <영문본>`.
 - dev 서버가 떠 있으면 `http://localhost:3000/<경로>`와 `/en/<경로>`가 200인지 확인한다.
 
-## 6. 사용자 확인 (필수)
+## 7. 사용자 확인 (필수)
 
 아래를 한 번에 보여 주고 AskUserQuestion으로 발행 여부를 묻는다. 확인 없이 `published: true`로 바꾸지 않는다.
 
@@ -63,8 +88,8 @@ frontmatter `art.undraw`를 고르고 `apps/blog/public/thumbnails/{slug}.webp`�
 - 영문 title, description
 - 점검 결과(스캔, 린트)와 확인하지 못한 것
 
-## 7. 발행
+## 8. 발행
 
-승인받으면 한국어본과 영문본 모두 `published: true`로 바꾸고 `date`를 발행 시각(`date "+%Y-%m-%d %H:%M:00"`)으로 바꾼다. 두 파일의 `date`는 같아야 한다. 글, 영문본, 썸네일, `apps/blog/data/tag-scores.json`을 한 커밋으로 묶는다(메시지 예: `📝 Publish <slug>`). **푸시는 사용자가 따로 요청할 때만 한다.**
+승인받으면 한국어본과 영문본 모두 `published: true`로 바꾸고 `date`를 발행 시각(`date "+%Y-%m-%d %H:%M:00"`)으로 바꾼다. 두 파일의 `date`는 같아야 한다. 글, 영문본, 썸네일, (손댔다면) `apps/blog/data/related-posts.json`을 한 커밋으로 묶는다(메시지 예: `📝 Publish <slug>`). **푸시는 사용자가 따로 요청할 때만 한다.**
 
 푸시하면 `.github/workflows/notify-push.yaml`이 `published: false → true` 전환을 감지해 구독자에게 웹 푸시를 보낸다. 한 번 나가면 되돌릴 수 없으니 푸시 전에 이 점을 사용자에게 알린다. 발송이 실패하면 `gh workflow run notify-push.yaml -f files=<경로>`로 수동 발송한다.
