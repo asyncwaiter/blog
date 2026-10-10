@@ -225,7 +225,7 @@ importers:
         version: 4.6.2
       '@react-three/fiber':
         specifier: ^9.8.1
-        version: 9.8.1(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.186.0)
+        version: 9.8.1(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.186.1)
       '@stylexjs/stylex':
         specifier: 'catalog:'
         version: 0.19.0
@@ -278,8 +278,8 @@ importers:
         specifier: 'catalog:'
         version: 0.35.4(@types/node@26.2.0)
       three:
-        specifier: ^0.186.0
-        version: 0.186.0
+        specifier: ^0.186.1
+        version: 0.186.1
       web-vitals:
         specifier: ^6.1.1
         version: 6.2.1
@@ -3554,8 +3554,8 @@ packages:
     resolution: {integrity: sha512-R1Cg4Vu0UULeDfHL/kjABLaTW++9yD/B6n2g48y5dJ04hsEaxcfmAqbNDzNsbqAYJyIpZafjklLG9YxRu9uzOg==}
     engines: {node: '>=18'}
 
-  three@0.186.0:
-    resolution: {integrity: sha512-cr/fIM2ddMSVbYVgkfD4jLJv7Fh/8ZTjvo+7gQeSVGUZHxpx9FDwoL5iC7hUz/LiRA8wMbqfnb90xKfm1/HHkQ==}
+  three@0.186.1:
+    resolution: {integrity: sha512-blFeqb49wRCSGUGj7gtpfnSGHy2lwDk94RhUmS1c/hTby70kvChbWpkJ4Pm1390LqzzvTmzgXKHPEafJwCb8jA==}
 
   tinyexec@1.3.0:
     resolution: {integrity: sha512-QKAl9m8gWWGHV8jZcPeym6j+XULi6tOf1mT83WYJ4Lk2ytW/uwAWkrP0uFsdoYMdueVJ0qs26wZ+23xeB4ibNQ==}
@@ -4435,7 +4435,7 @@ snapshots:
 
   '@protobufjs/utf8@1.1.2': {}
 
-  '@react-three/fiber@9.8.1(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.186.0)':
+  '@react-three/fiber@9.8.1(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(three@0.186.1)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@types/webxr': 0.5.24
@@ -4446,7 +4446,7 @@ snapshots:
       react-use-measure: 2.1.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       scheduler: 0.28.0
       suspend-react: 0.1.3(react@19.2.8)
-      three: 0.186.0
+      three: 0.186.1
       use-sync-external-store: 1.6.0(react@19.2.8)
       zustand: 5.0.14(@types/react@19.2.18)(react@19.2.8)(use-sync-external-store@1.6.0(react@19.2.8))
     optionalDependencies:
@@ -7225,7 +7225,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  three@0.186.0: {}
+  three@0.186.1: {}
 
   tinyexec@1.3.0: {}
 
