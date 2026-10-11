@@ -223,6 +223,7 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
       title: plainTitle,
       description,
       date,
+      updated,
       tags,
       imageUrl: `${SiteConfig.url}${ogImageUrl}`,
       url: postUrl,

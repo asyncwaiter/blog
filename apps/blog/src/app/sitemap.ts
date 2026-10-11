@@ -40,7 +40,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     ...posts.map((post) => ({
       url: `${SITE}/${post.fields.slug}`,
-      lastModified: toInstant(post.frontMatter.date),
+      lastModified: toInstant(
+        post.frontMatter.updated ?? post.frontMatter.date,
+      ),
       ...(enSlugs.has(post.fields.slug) && {
         alternates: {
           languages: {
@@ -52,7 +54,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...enPosts.map((post) => ({
       url: `${SITE}/en/${post.fields.slug}`,
-      lastModified: toInstant(post.frontMatter.date),
+      lastModified: toInstant(
+        post.frontMatter.updated ?? post.frontMatter.date,
+      ),
       alternates: {
         languages: {
           ko: `${SITE}/${post.fields.slug}`,
