@@ -1,6 +1,5 @@
 import * as stylex from '@stylexjs/stylex'
 import {parseTitleEmphasis, stripTitleEmphasis} from '@yceffort/shared/utils'
-import {format} from 'date-fns'
 import type {Metadata} from 'next'
 import {cacheLife, cacheTag} from 'next/cache'
 import Link from 'next/link'
@@ -11,6 +10,7 @@ import {ViewTransition} from 'react'
 
 import * as ambientStyles from '@/components/layout/ambient.styles'
 import {PostArticle} from '@/components/post/PostArticle'
+import PostDate from '@/components/post/PostDate'
 import ProfileImage from '@/components/post/ProfileImage'
 import * as readingProgressStyles from '@/components/post/reading-progress.styles'
 import RelatedPosts from '@/components/post/RelatedPosts'
@@ -215,8 +215,6 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
     thumbnail,
   })
   const postYear = new Date(date).getFullYear()
-  const dateLabel = format(new Date(date), 'yyyy-MM-dd')
-  const updatedLabel = updated && format(new Date(updated), 'yyyy-MM-dd')
   const postUrl = `${SiteConfig.url}${pathPrefix}/${postSlug}`
   const jsonLd = [
     buildBlogPostingJsonLd({
@@ -330,12 +328,11 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
                   {SiteConfig.author.name}
                 </div>
                 <div className={`sub ${readingProgressStyles.sub}`}>
-                  <time dateTime={dateLabel}>{dateLabel}</time>
-                  {updatedLabel && (
+                  <PostDate value={date} />
+                  {updated && (
                     <>
                       {' '}
-                      · {labels.updated}{' '}
-                      <time dateTime={updatedLabel}>{updatedLabel}</time>
+                      · {labels.updated} <PostDate value={updated} />
                     </>
                   )}{' '}
                   · {labels.readingTime(readingTime)}
