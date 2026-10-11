@@ -1170,53 +1170,53 @@
     "classes": ["max-w-none"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "span",
     "classes": ["block", "animate-pulse", "rounded"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "div",
     "classes": ["relative"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "span2",
     "classes": ["mt-3", "block"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "span3",
     "classes": ["block", "animate-pulse", "rounded-full"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "span4",
     "classes": ["mt-1", "block"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "span5",
     "classes": ["animate-pulse", "rounded-full"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "article",
     "classes": ["max-w-none"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
+    "file": "apps/blog/src/components/post/PostLoading.tsx",
     "key": "span6",
     "classes": ["mt-2", "block", "animate-pulse", "rounded", "first:mt-0"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/page.tsx",
+    "file": "apps/blog/src/components/post/PostDetail.tsx",
     "key": "div",
     "classes": ["relative"]
   },
   {
-    "file": "apps/blog/src/app/[year]/[...slug]/page.tsx",
-    "key": "div2",
+    "file": "apps/blog/src/components/post/PostDetail.tsx",
+    "key": "draft",
     "classes": [
       "mb-3",
       "inline-block",
@@ -1230,50 +1230,5 @@
       "text-white",
       "shadow"
     ]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "span",
-    "classes": ["block", "animate-pulse", "rounded"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "div",
-    "classes": ["relative"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "span2",
-    "classes": ["block", "animate-pulse", "rounded-full"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "span3",
-    "classes": ["mt-1", "block"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "span4",
-    "classes": ["animate-pulse", "rounded-full"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "span5",
-    "classes": ["mt-3", "block"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "article",
-    "classes": ["max-w-none"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/loading.tsx",
-    "key": "span6",
-    "classes": ["mt-2", "block", "animate-pulse", "rounded", "first:mt-0"]
-  },
-  {
-    "file": "apps/blog/src/app/en/[year]/[...slug]/page.tsx",
-    "key": "div",
-    "classes": ["relative"]
   }
 ]
