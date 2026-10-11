@@ -846,18 +846,6 @@
     "key": "baseClass",
     "classes": [
       "mx-auto",
-      "max-w-none",
-      "w-[95vw]",
-      "px-4",
-      "sm:px-6",
-      "lg:px-8"
-    ]
-  },
-  {
-    "file": "apps/blog/src/components/layout/SectionContainer.tsx",
-    "key": "baseClass2",
-    "classes": [
-      "mx-auto",
       "max-w-3xl",
       "px-4",
       "sm:px-6",
@@ -1180,18 +1168,6 @@
     "file": "apps/blog/src/components/about/AboutIntro.tsx",
     "key": "div2",
     "classes": ["max-w-none"]
-  },
-  {
-    "file": "apps/blog/src/app/[year]/[...slug]/layout.tsx",
-    "key": "div",
-    "classes": [
-      "mx-auto",
-      "max-w-3xl",
-      "px-4",
-      "sm:px-6",
-      "xl:max-w-5xl",
-      "xl:px-0"
-    ]
   },
   {
     "file": "apps/blog/src/app/[year]/[...slug]/loading.tsx",
