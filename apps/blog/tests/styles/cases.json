@@ -78,7 +78,7 @@
     ]
   },
   {
-    "file": "apps/blog/src/app/page.tsx",
+    "file": "apps/blog/src/components/home/HomeView.tsx",
     "key": "section",
     "classes": [
       "grid",
@@ -1091,17 +1091,6 @@
     "file": "apps/blog/src/components/about/AboutPageView.tsx",
     "key": "div",
     "classes": ["mt-4"]
-  },
-  {
-    "file": "apps/blog/src/app/en/page.tsx",
-    "key": "section",
-    "classes": [
-      "grid",
-      "grid-cols-1",
-      "gap-8",
-      "md:grid-cols-2",
-      "lg:grid-cols-3"
-    ]
   },
   {
     "file": "apps/blog/src/app/offline/page.tsx",
