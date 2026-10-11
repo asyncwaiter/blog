@@ -1100,7 +1100,7 @@
     ]
   },
   {
-    "file": "apps/blog/src/app/about/page.tsx",
+    "file": "apps/blog/src/components/about/AboutPageView.tsx",
     "key": "div",
     "classes": ["mt-4"]
   },
@@ -1167,19 +1167,9 @@
     ]
   },
   {
-    "file": "apps/blog/src/app/resume/page.tsx",
+    "file": "apps/blog/src/components/about/ResumePageView.tsx",
     "key": "div",
     "classes": ["mt-4"]
-  },
-  {
-    "file": "apps/blog/src/components/about/AboutHero.tsx",
-    "key": "span",
-    "classes": ["sr-only"]
-  },
-  {
-    "file": "apps/blog/src/components/about/AboutHero.tsx",
-    "key": "div",
-    "classes": ["flex", "justify-center", "md:justify-end"]
   },
   {
     "file": "apps/blog/src/components/about/AboutIntro.tsx",
