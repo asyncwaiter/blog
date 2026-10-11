@@ -8,11 +8,13 @@ import {getAllSeries} from '@/utils/Series'
 const SITE = SiteConfig.url
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [posts, enPosts, tags, series] = await Promise.all([
+  const [posts, enPosts, tags, enTags, series, enSeries] = await Promise.all([
     getAllPosts(),
     getAllPosts('en'),
     getAllTagsFromPosts(),
+    getAllTagsFromPosts('en'),
     getAllSeries(),
+    getAllSeries('en'),
   ])
 
   const enSlugs = new Set(enPosts.map((p) => p.fields.slug))
@@ -73,6 +75,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     ...series.map((s) => ({
       url: `${SITE}/series/${s.slug}`,
+      lastModified: new Date(),
+    })),
+    ...enTags.map(({tag}) => ({
+      url: `${SITE}/en/tags/${tag}`,
+    })),
+    {
+      url: `${SITE}/en/series`,
+      lastModified: new Date(),
+    },
+    ...enSeries.map((s) => ({
+      url: `${SITE}/en/series/${s.slug}`,
       lastModified: new Date(),
     })),
   ]
