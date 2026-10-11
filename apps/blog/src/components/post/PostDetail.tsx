@@ -35,6 +35,7 @@ const LABELS = {
   ko: {
     pathPrefix: '',
     inLanguage: 'ko-KR',
+    updated: '수정',
     readingTime: (minutes: number) => `${minutes}분`,
     statsMin: 'min',
     langCode: 'KO',
@@ -45,6 +46,7 @@ const LABELS = {
   en: {
     pathPrefix: '/en',
     inLanguage: 'en',
+    updated: 'Updated',
     readingTime: (minutes: number) => `${minutes} min read`,
     statsMin: 'min read',
     langCode: 'EN',
@@ -194,7 +196,7 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
   const labels = LABELS[locale]
   const {pathPrefix} = labels
   const {
-    frontMatter: {title, tags, date, description, series, published},
+    frontMatter: {title, tags, date, updated, description, series, published},
     body,
     path,
     fields: {slug: postSlug},
@@ -214,6 +216,7 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
   })
   const postYear = new Date(date).getFullYear()
   const dateLabel = format(new Date(date), 'yyyy-MM-dd')
+  const updatedLabel = updated && format(new Date(updated), 'yyyy-MM-dd')
   const postUrl = `${SiteConfig.url}${pathPrefix}/${postSlug}`
   const jsonLd = [
     buildBlogPostingJsonLd({
@@ -326,7 +329,15 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
                   {SiteConfig.author.name}
                 </div>
                 <div className={`sub ${readingProgressStyles.sub}`}>
-                  {dateLabel} · {labels.readingTime(readingTime)}
+                  <time dateTime={dateLabel}>{dateLabel}</time>
+                  {updatedLabel && (
+                    <>
+                      {' '}
+                      · {labels.updated}{' '}
+                      <time dateTime={updatedLabel}>{updatedLabel}</time>
+                    </>
+                  )}{' '}
+                  · {labels.readingTime(readingTime)}
                 </div>
               </div>
             </div>

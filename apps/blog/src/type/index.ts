@@ -11,6 +11,8 @@ export interface FrontMatter {
   tags: string[]
   published: boolean
   date: string
+  /** 본문을 마지막으로 고친 시각. pre-commit 훅(scripts/stamp-post-updated.mjs)이 갱신한다 */
+  updated?: string
   description: string
   series?: string
   seriesOrder?: number
