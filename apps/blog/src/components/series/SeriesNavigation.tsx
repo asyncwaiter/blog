@@ -2,8 +2,6 @@ import {stripTitleEmphasis} from '@yceffort/shared/utils'
 import Link from 'next/link'
 
 import type {Post} from '@/type'
-
-import {seriesNeighbors} from './neighbors'
 interface SeriesNavigationProps {
   seriesName: string
   seriesSlug?: string
@@ -31,17 +29,21 @@ export default function SeriesNavigation({
   locale = 'ko',
 }: SeriesNavigationProps) {
   const labels = LABELS[locale]
-  const {currentIndex, prevPost, nextPost} = seriesNeighbors(
-    seriesPosts,
-    currentSlug,
+  const currentIndex = seriesPosts.findIndex(
+    (post) => post.fields.slug === currentSlug,
   )
+  const prevPost = currentIndex > 0 ? seriesPosts[currentIndex - 1] : null
+  const nextPost =
+    currentIndex < seriesPosts.length - 1 ? seriesPosts[currentIndex + 1] : null
   return (
     <div className="post-series-nav" data-nav="series-nav">
       <div className="series-nav-head">
         <span className="series-nav-kicker">{labels.kicker}</span>
         <h3 className="series-nav-title">
           {seriesSlug ? (
-            <Link href={`/series/${seriesSlug}`}>{seriesName}</Link>
+            <Link href={`${pathPrefix}/series/${seriesSlug}`}>
+              {seriesName}
+            </Link>
           ) : (
             seriesName
           )}

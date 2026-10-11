@@ -289,15 +289,10 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
           )}
           <div className={`post-eyebrow ${readingProgressStyles.post_eyebrow}`}>
             ◆{' '}
-            {/* /en 에는 시리즈 목록 라우트가 없어 영문판은 링크를 걸지 않는다 */}
             {seriesInfo ? (
-              locale === 'ko' ? (
-                <Link href={`/series/${seriesInfo.slug}`}>
-                  SERIES · {seriesInfo.name}
-                </Link>
-              ) : (
-                `SERIES · ${seriesInfo.name}`
-              )
+              <Link href={`${pathPrefix}/series/${seriesInfo.slug}`}>
+                SERIES · {seriesInfo.name}
+              </Link>
             ) : (
               'ESSAY'
             )}
@@ -362,7 +357,7 @@ async function PostBody({year, slug, locale}: PostParams & {locale: Locale}) {
                 className={`post-tags-row ${readingProgressStyles.post_tags_row}`}
               >
                 {tags.slice(0, 5).map((tag) => (
-                  <Tag key={tag} text={tag} linked={locale === 'ko'} />
+                  <Tag key={tag} text={tag} pathPrefix={pathPrefix} />
                 ))}
               </div>
             </ViewTransition>
