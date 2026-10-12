@@ -108,16 +108,8 @@ jobs:
       - name: Install Chromium
         run: pnpm --filter blog exec playwright install --with-deps chromium
 
-      # 코드 블록 타이포그래피와 Prism 토큰 색 검사. 포크에서도 그대로 유효하다.
-      - name: Markdown style check
-        run: pnpm --filter blog exec node scripts/check-markdown-styles.mjs
-
-      # tests/styles/baseline.css 는 2026-09-13 StyleX 마이그레이션 때 동결한 스냅샷이라
-      # 팔레트(--primary*)가 리브랜딩 전 값이다. brand 색을 쓰는 요소는 전부 차이로 잡히므로
-      # 새 기준을 뜰 때까지 결과만 남기고 빌드는 막지 않는다.
-      - name: Style parity (utility classes, non-blocking)
-        continue-on-error: true
-        run: pnpm --filter blog exec node scripts/check-style-parity.mjs
+      - name: Markdown styles
+        run: pnpm --filter blog test:styles
 
   lighthouse:
     # 임시막기
