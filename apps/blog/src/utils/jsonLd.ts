@@ -5,6 +5,7 @@ export function buildBlogPostingJsonLd({
   title,
   description,
   date,
+  updated,
   tags,
   imageUrl,
   url,
@@ -13,6 +14,7 @@ export function buildBlogPostingJsonLd({
   title: string
   description?: string
   date: string
+  updated?: string
   tags?: string[]
   imageUrl: string
   url: string
@@ -23,7 +25,7 @@ export function buildBlogPostingJsonLd({
     '@type': 'BlogPosting',
     headline: title,
     datePublished: toInstant(date).toISOString(),
-    dateModified: toInstant(date).toISOString(),
+    dateModified: toInstant(updated ?? date).toISOString(),
     description,
     image: imageUrl,
     url,

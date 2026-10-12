@@ -1,15 +1,17 @@
-import {format} from 'date-fns'
 import Link from 'next/link'
 
 import * as recentStyles from '@/components/home/recent.styles'
 import {EmphasizedTitle} from '@/components/post/EmphasizedTitle'
+import PostDate from '@/components/post/PostDate'
 import type {Series} from '@/type'
 export default function SeriesRow({
   series,
   index,
+  pathPrefix = '',
 }: {
   series: Series
   index: number
+  pathPrefix?: string
 }) {
   const {slug, name, title, description, posts} = series
   const latest = posts.reduce(
@@ -25,7 +27,7 @@ export default function SeriesRow({
   return (
     <div className={`rec-row ${recentStyles.rec_row}`}>
       <Link
-        href={`/series/${slug}`}
+        href={`${pathPrefix}/series/${slug}`}
         aria-label={name}
         prefetch={false}
         className={recentStyles.element_a}
@@ -45,9 +47,9 @@ export default function SeriesRow({
       <div className={`rd ${recentStyles.rd}`}>{description}</div>
       <div className={`rmeta ${recentStyles.rmeta}`}>
         <b className={recentStyles.element_b}>
-          {format(new Date(latest), 'yyyy-MM-dd')}
+          <PostDate value={latest} />
         </b>
-        마지막 업데이트
+        {pathPrefix ? 'last updated' : '마지막 업데이트'}
       </div>
       <div className={`rarrow ${recentStyles.rarrow}`} aria-hidden="true">
         <svg

@@ -4,6 +4,7 @@ import Link from 'next/link'
 
 import * as archiveStyles from '@/app/archive/archive.styles'
 import * as ambientStyles from '@/components/layout/ambient.styles'
+import PostDate from '@/components/post/PostDate'
 import {SiteConfig} from '@/config'
 import type {Post} from '@/type'
 import {getAllPosts} from '@/utils/Post'
@@ -64,13 +65,20 @@ export default async function ArchivePage() {
                     <span
                       className={`archive-date ${archiveStyles.archive_date}`}
                     >
-                      {post.frontMatter.date.slice(5, 10)}
+                      <PostDate value={post.frontMatter.date} pattern="MM-dd" />
                     </span>
                     <span
                       className={`archive-title ${archiveStyles.archive_title}`}
                     >
                       {stripTitleEmphasis(post.frontMatter.title)}
                     </span>
+                    {post.frontMatter.updated && (
+                      <span
+                        className={`archive-updated ${archiveStyles.archive_updated}`}
+                      >
+                        수정 <PostDate value={post.frontMatter.updated} />
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}

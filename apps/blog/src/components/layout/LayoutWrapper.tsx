@@ -122,7 +122,7 @@ function HeaderNav() {
   const menu = pathPrefix
     ? SiteConfig.menu.map((link) =>
         // 영문판이 있는 메뉴만 /en으로 보낸다
-        link.path === '/pages/1' || link.path === '/about'
+        ['/pages/1', '/about', '/series', '/tags'].includes(link.path)
           ? {
               ...link,
               path: `${pathPrefix}${link.path}`,
@@ -331,30 +331,26 @@ const LayoutWrapper = ({
   enSlugs: string[]
 }) => {
   const pathname = usePathname()
-  const isEn = pathname?.startsWith('/en')
-  let containerClass = stylex.props(sx.containerClass).className
-  const wide = false
-  if (pathname === '/' || pathname === '/en') {
-    containerClass = stylex.props(sx.container).className
-  } else if (pathname === '/about' || pathname === '/en/about') {
-    containerClass = stylex.props(sx.container2).className
-  } else if (
-    pathname?.startsWith('/pages') ||
-    pathname?.startsWith('/en/pages')
-  ) {
-    containerClass = stylex.props(sx.container).className
-  } else if (pathname?.startsWith('/tags')) {
-    containerClass = stylex.props(sx.container).className
-  } else if (pathname === '/series') {
-    containerClass = stylex.props(sx.container).className
-  }
+  const isEn = useLocale().locale === 'en'
+  // 영문 경로도 같은 폭을 쓰도록 /en 접두사를 떼고 고른다
+  const path = pathname === '/en' ? '/' : pathname?.replace(/^\/en(?=\/.)/, '')
+  const containerClass = stylex.props(
+    path === '/about'
+      ? sx.container2
+      : path === '/' ||
+          path === '/series' ||
+          path?.startsWith('/pages') ||
+          path?.startsWith('/tags')
+        ? sx.container
+        : sx.containerClass,
+  ).className
   return (
     <>
       <a href="#main" className={`skip-link ${skipLink}`}>
         {isEn ? 'Skip to content' : '본문으로 건너뛰기'}
       </a>
       <Header enSlugs={enSlugs} />
-      <SectionContainer className={wide ? '' : containerClass} wide={wide}>
+      <SectionContainer className={containerClass}>
         <main id="main" className={stylex.props(sx.main).className}>
           {children}
         </main>

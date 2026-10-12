@@ -16,6 +16,7 @@
  */
 
 import {existsSync, readdirSync, readFileSync, statSync} from 'node:fs'
+import {createRequire} from 'node:module'
 import {basename, dirname, join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 
@@ -41,6 +42,25 @@ const SERIES_DIR = join(BLOG_DIR, 'series')
 const PUBLIC_DIR = join(BLOG_DIR, 'public')
 // research 슬라이드는 marp로 렌더되어 파이프라인이 다르다. slide 필드 대조용으로만 읽는다.
 const SLIDES_DIR = resolve(BLOG_DIR, '../research/research')
+
+// 사이트의 앵커는 Rust 렌더러가 slug_table.rs로 만들고, 이 검사는 JS github-slugger로 앵커를 맞춰 본다.
+// 두 버전이 다르면 링크 검사가 실제 앵커와 어긋나므로 시작할 때 막는다.
+const SLUG_TABLE = resolve(
+  BLOG_DIR,
+  '../../packages/markdown-rs/src/slug_table.rs',
+)
+const sluggerVersion = createRequire(import.meta.url)(
+  'github-slugger/package.json',
+).version
+const tableVersion = readFileSync(SLUG_TABLE, 'utf8').match(
+  /github-slugger (\S+) 의/,
+)?.[1]
+if (tableVersion !== sluggerVersion) {
+  console.error(
+    `slug_table.rs는 github-slugger ${tableVersion} 기준인데 설치된 버전은 ${sluggerVersion}이다. node packages/markdown-rs/scripts/gen-slug-table.mjs로 다시 만들 것`,
+  )
+  process.exit(1)
+}
 
 const REQUIRED_POST_FIELDS = [
   'title',
@@ -118,7 +138,7 @@ const slideSlugs = new Set(
     : [],
 )
 
-function checkFrontMatter(file, attributes, report) {
+function checkFrontMatter(file, attributes, rawFrontMatter, report) {
   const isSeries = file.startsWith(SERIES_DIR)
 
   if (isSeries) {
@@ -136,6 +156,15 @@ function checkFrontMatter(file, attributes, report) {
     }
   }
 
+  // 앱은 YAML로 파싱해 참거짓을 보고 알림과 수정일 스크립트는 글자를 비교한다.
+  // 'false'나 True처럼 쓰면 둘의 판정이 갈리므로 따옴표 없는 소문자만 받는다.
+  if (
+    attributes.published !== undefined &&
+    !/^published: (true|false)$/m.test(rawFrontMatter)
+  ) {
+    report('error', 0, 'published는 따옴표 없이 true 또는 false로 써야 한다')
+  }
+
   // Post.ts가 new Date(date).toISOString()을 무조건 호출하므로 파싱에 실패하면 빌드가 죽는다.
   if (attributes.date !== undefined) {
     const date = new Date(attributes.date)
@@ -144,16 +173,17 @@ function checkFrontMatter(file, attributes, report) {
     } else {
       // Post.ts가 toISOString()으로 UTC 날짜를 쓰므로 여기도 UTC로 읽는다.
       // 로컬 시간대로 읽으면 같은 글이 KST와 CI에서 다른 달로 떨어진다.
+      // 경로는 초안을 만든 달이고 date는 발행 시각이라, 다음 달 이후에 발행하면 date가 늦는 게 정상이다.
       const pathYearMonth = file.slice(POSTS_DIR.length + 1).slice(0, 7)
       const dateYearMonth = date.toISOString().slice(0, 7).replace('-', '/')
       if (
         /^\d{4}\/\d{2}$/.test(pathYearMonth) &&
-        pathYearMonth !== dateYearMonth
+        dateYearMonth < pathYearMonth
       ) {
         report(
           'warn',
           0,
-          `date(${dateYearMonth})가 경로(${pathYearMonth})와 다르다`,
+          `date(${dateYearMonth})가 경로(${pathYearMonth})보다 이르다`,
         )
       }
     }
@@ -382,7 +412,7 @@ function checkJsxNodes(tree, report) {
 
 function checkFile(file) {
   const raw = readFileSync(file, 'utf8')
-  const {attributes, body} = frontMatter(raw)
+  const {attributes, body, frontmatter: rawFrontMatter} = frontMatter(raw)
   const lineOffset = raw.split('\n').length - body.split('\n').length
 
   const found = []
@@ -390,7 +420,7 @@ function checkFile(file) {
     found.push({severity, line: line ? line + lineOffset : 1, message})
   }
 
-  checkFrontMatter(file, attributes, report)
+  checkFrontMatter(file, attributes, rawFrontMatter, report)
 
   // 본문을 MDX로 읽으므로 { 나 < 하나가 빌드를 통째로 깨뜨린다. hast를 만드는 데서
   // 멈추지 않고 renderPost.tsx와 같은 JSX 변환까지 돌린다. 실제 컴포넌트 구현은 없어도

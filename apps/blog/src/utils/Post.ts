@@ -79,7 +79,7 @@ export const getAllPosts = cache(async function getAllPostsImpl(
       const file = fs.readFileSync(path, {encoding: 'utf8'})
       const {attributes, body} = frontMatter<FrontMatter>(file)
       const fm: FrontMatter = attributes
-      const {tags: fmTags, published, date} = fm
+      const {tags: fmTags, published, date, updated} = fm
 
       const slug = pathToSlug(path)
 
@@ -89,12 +89,20 @@ export const getAllPosts = cache(async function getAllPostsImpl(
         const stats = readingTime(body, {wordsPerMinute: 250})
 
         const thumbnail = resolveThumbnail(slug, fm.art)
+        const createdAt = new Date(date).toISOString().substring(0, 19)
+        const updatedAt =
+          updated && new Date(updated).toISOString().substring(0, 19)
 
         const result: Post = {
           frontMatter: {
             ...fm,
             tags,
-            date: new Date(date).toISOString().substring(0, 19),
+            date: createdAt,
+            // 발행한 날 고친 것은 수정으로 보여주지 않는다
+            updated:
+              updatedAt && updatedAt.slice(0, 10) > createdAt.slice(0, 10)
+                ? updatedAt
+                : undefined,
             thumbnail,
           },
           body,
@@ -254,15 +262,8 @@ export const getFeaturedPosts = cache(async function getFeaturedPostsImpl(
   return {popular, recent}
 })
 
-export const getFeaturedSlugs = cache(async function getFeaturedSlugsImpl(
-  locale: Locale = 'ko',
-): Promise<string[]> {
-  const {popular, recent} = await getFeaturedPosts(locale)
-  return [...popular, ...recent].map((p) => p.fields.slug)
-})
-
 // 빌드 시 사전 생성할 슬러그. 검색 롱테일 유입이 콜드 함수 렌더(TTFB 상승)를
-// 밟지 않도록, 홈 노출용(getFeaturedSlugs)보다 넓게 최근 1년 인기 상위를 포함한다.
+// 밟지 않도록, 홈 노출용(getFeaturedPosts)보다 넓게 최근 1년 인기 상위를 포함한다.
 export const getPrerenderSlugs = cache(async function getPrerenderSlugsImpl(
   locale: Locale = 'ko',
 ): Promise<string[]> {

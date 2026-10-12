@@ -1,12 +1,12 @@
 import * as stylex from '@stylexjs/stylex'
 import {stripTitleEmphasis} from '@yceffort/shared/utils'
-import {format} from 'date-fns'
 import Image from 'next/image'
 import Link from 'next/link'
 import {ViewTransition} from 'react'
 
 import {EmphasizedTitle} from '@/components/post/EmphasizedTitle'
 import * as listStyles from '@/components/post/list.styles'
+import PostDate from '@/components/post/PostDate'
 import type {Post} from '@/type'
 const sx = stylex.create({
   article: {
@@ -47,6 +47,7 @@ export default function PostRow({
     fields: {slug},
     frontMatter: {
       date,
+      updated,
       title: rawTitle,
       description,
       tags,
@@ -58,8 +59,6 @@ export default function PostRow({
     readingTime,
   } = post
   const plainTitle = stripTitleEmphasis(rawTitle)
-  const d = new Date(date)
-  const isoDate = format(d, 'yyyy-MM-dd')
   const transitionName = `post-${slug.replace(/\//g, '-')}`
   return (
     <article
@@ -141,7 +140,15 @@ export default function PostRow({
         )}
 
         <div className={`post-row-meta ${listStyles.post_row_meta}`}>
-          <time dateTime={isoDate}>{isoDate}</time>
+          <PostDate value={date} />
+          {updated && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>
+                {pathPrefix ? 'Updated' : '수정'} <PostDate value={updated} />
+              </span>
+            </>
+          )}
           <span aria-hidden="true">·</span>
           <span>
             {pathPrefix ? `${readingTime} min read` : `${readingTime}분`}
