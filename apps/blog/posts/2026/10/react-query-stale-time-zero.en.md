@@ -7,7 +7,8 @@ tags:
   - debugging
 published: true
 date: 2026-10-03 21:00:00
-description: 'I prefetched the data and even hydrated it, and queryFn was still called twice. In the last post I explained that as staleTime being 0, and the explanation was not right. In Suspense mode staleTime is clamped to a minimum of 1,000ms. I followed React Query and React internals to find out why that floor is needed, where the gap is measured, and what pushed my experiment past one second. The key was that a suspended render leaves nothing behind. And the same code crossed one second in some environments and not in others.'
+updated: 2026-10-12 21:41:41
+description: 'I prefetched the data and even hydrated it, and queryFn was still called twice. In the last post I explained that as staleTime being 0, and the explanation was not right. In Suspense mode staleTime is clamped to a minimum of 1,000ms. I followed React Query and React internals to find out why that floor is needed, where the gap is measured, and what pushed my experiment past one second. The key was that a suspended render leaves nothing behind. And even with the same code, the time that passes changes with the environment it runs in.'
 art:
   undraw: alarm-clock
   hue: cyan
@@ -660,11 +661,19 @@ On the same machine, transfer takes almost no time, so what is left is receiving
 | React               | development build (warnings and checks included) | production build (checks stripped)    |
 | Also shipped        | HMR runtime, error overlay                       | Nothing                               |
 
-In dev the browser receives larger, unminified JS and hydrates with a React that still carries its checks. Measuring the JS for the same page, dev was 3,837KB and prod 484KB. And running the same experiment again on the Mac I am writing this on, dev came in at 169ms and prod at 66ms, both inside 1,000ms, and the request did not go out twice. The laptop that produced 1,181ms and this Mac that produced 169ms ran the same code in the same dev mode. What made the one second was not the code but the environment. (This is a rough test and a rough comparison for now; I plan to write a separate post about the build later.)
+In dev the browser receives larger, unminified JS and hydrates with a React that still carries its checks. Measuring the JS for the same page, dev was 3,837KB and prod 484KB. But that difference alone did not explain one second. Running the same experiment again on the Mac I am writing this on, dev came in at 169ms and prod at 66ms, both inside 1,000ms, and the request did not go out twice. Same dev mode, yet 1,181ms on the laptop and 169ms on the Mac. The gap was too wide to be a device difference.
+
+### The one second came from the harness
+
+Opening the experiment again on the laptop that produced 1,181ms, it was the same experiment but not the same test code. The component was the same on both machines because I had copied it over separately, but the test code doing the measuring was not, and it had a 1.1 second `waitFor` in it. I had asked an AI to measure this gap alongside the staleTime experiment, and it seems to have slipped in then. I had been reading the component conditions carefully but not the test code, so I did not know it was there. It sat between the server receiving the data and the component mounting in the browser, so it was added straight onto the gap at mount time. Only the source of the one second changed; the conclusion of this post stands. But there was a lesson in it. Part of why I found this so late was that the test code was not in a repo. It differed depending on which computer I ran it on, and for the few days I did not have that laptop at hand I could not even check. So the test code is in a repo now. And from now on I need to verify the test code properly, not just the component.
+
+Look at the numbers again and they line up. Take 1,100ms off 1,181ms and about 80ms is left, the same order as the 169ms measured on this Mac. It also explains why `hydrated-fresh`, with no refetch at all, landed at almost the same 1,180ms: both scenarios went through the same wait. So what crossed the 1,000ms floor was not the device but my own harness. Real hydration came in at 50 to 300ms on every device I ran it on, well under the floor. In the real world the refetch would not have gone out, and the 60 requests at the top of this post were a number the wait produced.
+
+Still, that one second gave me something. Digging into why the gap was so large is how I found the two values hiding inside it: the JS load time that varies by device, and the clock difference between the server and the browser.
 
 ### When the device changes
 
-Prod does not pin the number down either. Steps 3 and 4 above are CPU work, so even with the same bundle, the time depends on the device. I ran the prod build again with CPU throttling in Chrome DevTools.
+That the time really does change when the device changes is something an experiment can confirm. Prod does not pin the number down either. Steps 3 and 4 above are CPU work, so even with the same bundle, the time depends on the device. I ran the prod build again with CPU throttling in Chrome DevTools.
 
 | CPU throttling | Median data age at mount | refetch |
 | -------------- | -----------------------: | ------- |
@@ -678,7 +687,7 @@ It is a simulation rather than a real device, and even at 6x it did not cross 1,
 
 So, starting from `staleTime`, I ended up walking through how React's Suspense rendering works. In the end, a suspended component leaves nothing behind, and knowing that properly is what let me answer the questions tangled up with `staleTime` and the ones that followed from it. Wondering how a retry differs from a remount and a re-render, and wondering why a minimum `staleTime` is needed at all, both came down to not understanding that one thing properly.
 
-Back to the three questions I started with. The one second floor was built to cover the time until a retry after a suspend, and it applies just the same on the path where prefetched data is hydrated. The gap is measured between the `dataUpdatedAt` the server stamped and the `Date.now()` the browser reads at the moment it subscribes, and it mixes together the time that actually passed and the difference between the two clocks. And what pushed that value past one second in my experiment was not the code but the environment. I have not yet isolated exactly what it was, but the fact that the same code ranges from 66ms to 1,181ms depending on the device was itself the answer.
+Back to the three questions I started with. The one second floor was built to cover the time until a retry after a suspend, and it applies just the same on the path where prefetched data is hydrated. The gap is measured between the `dataUpdatedAt` the server stamped and the `Date.now()` the browser reads at the moment it subscribes, and it mixes together the time that actually passed and the difference between the two clocks. And what pushed that value past one second in my experiment was, I thought, my device. Tracing it down, it was a 1.1 second wait my measurement harness had quietly slipped in. Real hydration came in at 50 to 300ms on every device, well under the floor, so in the real world the refetch would not have gone out. Still, that one second is what made me dig, and inside it were the two values hiding there: the JS load time that varies by device, and the clock difference between the server and the browser.
 
 So the `staleTime` you give hydrated data is not a number for how long to keep using the cache. It is a number for how long it takes, on your users' devices, to get from the server receiving the data to the component mounting. Just as React's 300ms and React Query's 1,000ms are heuristics rather than perfect numbers, this value has to be set by looking at your bundle size, the devices people mostly use, and their network. The `staleTime` I was vaguely worrying about in [the last post](/en/2026/10/rendering-boundary-server-functions) is something I now feel I can set with reasons behind it.
 
