@@ -7,7 +7,7 @@ tags:
   - debugging
 published: true
 date: 2026-10-03 21:00:00
-description: 'I prefetched the data and even hydrated it, and queryFn was still called twice. In the last post I explained that as staleTime being 0, and the explanation was not right. In Suspense mode staleTime is clamped to a minimum of 1,000ms. I followed React Query and React internals to find out why that floor is needed, where the gap is measured, and what pushed my experiment past one second. The answer came down to two things: a suspended render leaves nothing behind, and the cause was the device environment, not the code.'
+description: 'I prefetched the data and even hydrated it, and queryFn was still called twice. In the last post I explained that as staleTime being 0, and the explanation was not right. In Suspense mode staleTime is clamped to a minimum of 1,000ms. I followed React Query and React internals to find out why that floor is needed, where the gap is measured, and what pushed my experiment past one second. The key was that a suspended render leaves nothing behind. And the same code crossed one second in some environments and not in others.'
 art:
   undraw: alarm-clock
   hue: cyan
@@ -338,10 +338,10 @@ While working through this mechanism there was a part that confused me, so let u
    The answer is 300ms, because the throttle started after the fallback commit.
 
 2. Then if the data arrives at 324ms, when is it revealed?
-   At 324ms. This was the confusing part, and the reason is that the throttle from the fallback commit has ended and there was no new commit.
+   At 324ms. This was the confusing part: 300ms had already passed since the fallback commit, and in between there was no commit where a fallback appeared or disappeared.
 
 3. Finally, the data arrives at 100ms and 324ms. When is each revealed?
-   At 300ms and 600ms, because a commit happened at 300ms and the throttle started again.
+   At 300ms and 600ms. At 300ms the first content was revealed and the fallback disappeared, and that commit became the new reference point for the throttle.
 
 You can see the related PR code below. The current main has a few more parameters on the functions, but the core flow is the same.
 
@@ -672,7 +672,7 @@ Prod does not pin the number down either. Steps 3 and 4 above are CPU work, so e
 | 4x             |                    194ms | none    |
 | 6x             |                    306ms | none    |
 
-It is a simulation rather than a real device, and even at 6x it did not cross 1,000ms, but the same bundle went from 66ms to 306ms. Add a slow network and steps 1 and 2 stretch too. To sum up, when you prefetch, two things widen the gap at mount time: the time that actually passes until the JS is received and hydrated, and the clock difference between the server and the device. Both sit outside my code, and both vary with the user's device and network.
+It is a simulation rather than a real device, and even at 6x it did not cross 1,000ms, but the same bundle went from 66ms to 306ms. Add a slow network and steps 1 and 2 stretch too. To sum up, when you prefetch, two things widen the gap at mount time: the time that actually passes from receiving the data on the server until it mounts in the browser, and the clock difference between the server and the device. Both sit outside my code, and both vary with the user's device and network.
 
 ## Closing
 
