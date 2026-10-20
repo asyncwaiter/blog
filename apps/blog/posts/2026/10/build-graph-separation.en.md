@@ -6,6 +6,7 @@ tags:
   - debugging
 published: true
 date: 2026-10-20 00:10:00
+updated: 2026-10-20 19:58:06
 description: 'Once SSR came back to life, a new error surfaced: getLocale is not supported in Client Components. A typeof window check only tells you server or browser; it does not know whether the code is in the rsc bundle or the ssr bundle. I followed the Turbopack source to see how it splits the rsc, ssr, and client graphs, ran an experiment to confirm that libraries only offer choices through exports conditions, and ended up drawing the boundary at build time with server-only.'
 series: 'Rendering Boundaries'
 seriesOrder: 2
@@ -188,7 +189,7 @@ The second one, `compileTimeInfo`, substitutes constants that differ per environ
 'process.browser': isClient,
 ```
 
-Just as `process.browser` is `false` on the server and `true` on the client, values specific to each graph's environment go in here. `NEXT_PUBLIC_` environment variables get baked into the bundle here too. Note that `typeof window` is not on this list. It is not substituted and goes all the way to runtime as is.
+Just as `process.browser` is `false` on the server and `true` on the client, values specific to each graph's environment go in here. `NEXT_PUBLIC_` environment variables get baked into the bundle here too. Note that `typeof window` is not on the `define-env.ts` list. So at first I assumed it was not substituted at all and was simply evaluated at runtime, as in any plain JS environment. I was wrong. The mistake was judging from `define-env.ts` alone. `typeof window` is handled differently by each bundler. In Turbopack, `typeof window` comes from the `enable_typeof_window_inlining` option on `ModuleOptionsContext`. The client graph is set to `TypeofWindow::Object` and the server graphs to `TypeofWindow::Undefined`, and when turbopack-ecmascript analyzes a module it merges that value into `compileTimeInfo.defines` as a `typeof window` entry. Webpack substitutes it too, but there SWC already replaces it with a literal during compilation, one layer before this, so there was never any need to put it in `define-env.ts`.
 
 ### The third argument, moduleOptions
 

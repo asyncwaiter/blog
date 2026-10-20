@@ -6,6 +6,7 @@ tags:
   - debugging
 published: true
 date: 2026-10-20 00:10:00
+updated: 2026-10-20 19:58:06
 description: 'SSR이 살아나자 getLocale is not supported in Client Components 에러가 드러났다. typeof window 분기는 서버인지 브라우저인지만 알 뿐, 지금 코드가 rsc 번들인지 ssr 번들인지는 모른다. Turbopack이 rsc, ssr, client 세 그래프를 어떻게 가르는지 소스로 따라가고, 라이브러리가 exports 조건으로 그래프별 파일을 고르게 두는 원리를 실험으로 확인한 뒤, server-only로 경계를 빌드 타임에 긋는 쪽을 택했다.'
 series: '렌더링 경계'
 seriesOrder: 2
@@ -185,7 +186,7 @@ pub struct NextEcmascriptClientReferenceTransition {
 'process.browser': isClient,
 ```
 
-`process.browser`가 서버에선 `false`, 클라이언트에선 `true`이듯 그래프 환경별 값이 들어간다. `NEXT_PUBLIC_` 환경변수도 여기서 번들에 박히게 된다. 참고로 `typeof window`는 여기 목록에 없다. 이건 치환되지 않고 런타임까지 그대로 간다.
+`process.browser`가 서버에선 `false`, 클라이언트에선 `true`이듯 그래프 환경별 값이 들어간다. `NEXT_PUBLIC_` 환경변수도 여기서 번들에 박히게 된다. 참고로 `typeof window`는 `define-env.ts` 목록에 없다. 그래서 처음엔 일반 JS 환경처럼 치환되지 않고 당연히 런타임에서 평가된다고 생각했다. 하지만 틀렸다. `define-env.ts` 하나만 보고 판단한 게 문제였다. `typeof window`는 번들러마다 다르게 처리되고 있었다. Turbopack에서 `typeof window`는 `ModuleOptionsContext`의 `enable_typeof_window_inlining` 옵션에서 온다. 클라이언트 그래프는 `TypeofWindow::Object`, 서버 그래프는 `TypeofWindow::Undefined`로 설정되고, turbopack-ecmascript가 모듈을 분석할 때 이 값을 `compileTimeInfo.defines`에 `typeof window` 엔트리로 합쳐 넣는다. 그리고 웹팩도 치환이 되긴 했는데, 이 레이어 전 SWC가 컴파일하는 과정에서 이미 리터럴로 치환해서 `define-env.ts`에 넣을 필요가 없던 것이었다.
 
 ### 세 번째 인자, moduleOptions
 
