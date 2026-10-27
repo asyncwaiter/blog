@@ -6,7 +6,7 @@ tags:
   - debugging
 published: true
 date: 2026-10-20 00:10:00
-updated: 2026-10-26 22:00:28
+updated: 2026-10-27 20:26:16
 description: 'SSR이 살아나자 getLocale is not supported in Client Components 에러가 드러났다. typeof window 분기는 서버인지 브라우저인지만 알 뿐, 지금 코드가 rsc 번들인지 ssr 번들인지는 모른다. Turbopack이 rsc, ssr, client 세 그래프를 어떻게 가르는지 소스로 따라가고, 라이브러리가 exports 조건으로 그래프별 파일을 고르게 두는 원리를 실험으로 확인한 뒤, server-only로 경계를 빌드 타임에 긋는 쪽을 택했다.'
 series: '렌더링 경계'
 seriesOrder: 2
@@ -340,7 +340,7 @@ import_map.insert_wildcard_alias(
 );
 ```
 
-ssr 그래프의 `react-server-dom-turbopack/client`는 Next가 미리 번들해둔 ssr용 파일로 못 박혀 있고, 그 안에서 `createServerReference`는 `callServer` 자리에 `noServerCall`이 들어간 채 만들어진다. 브라우저 그래프에서는 같은 이름이 Next 안의 복사본으로 보내진 뒤 거기서부터 `browser` 조건으로 `client.browser.js`가 골라지고, 거기엔 진짜 fetch가 들어 있다. stub 코드는 둘이 똑같은데 stub이 부르는 React 파일이 달라서, 같은 호출이 SSR에서만 터진 것이다. React가 막은 게 아니라 `resolveOptions`가 ssr에 넣은 파일이 그렇게 짜여 있었던 것이고, 넣은 방법은 조건이 아니라 하드코딩된 표였다.
+이 전에 문제가 됐던 Server Functions cannot be called during initial render도 import map이 그래프별로 파일을 넣어주는데서 문제가 발생했던 것이다. ssr 그래프의 `react-server-dom-turbopack/client`는 Next가 미리 번들해둔 ssr용 파일로 못 박혀 있고, 그 안에서 `createServerReference`는 `callServer` 자리에 `noServerCall`이 들어간 채 만들어진다. 브라우저 그래프에서는 같은 이름이 Next 안의 복사본으로 보내진 뒤 거기서부터 `browser` 조건으로 `client.browser.js`가 골라지고, 거기엔 진짜 fetch가 들어 있다. stub 코드는 둘이 똑같은데 stub이 import하는 React 파일이 달라서, 같은 호출이 SSR에서만 터진 것이다. 이게 resolve 단계에서 진행된다.
 
 이번 `getLocale` 에러는 다른 쪽, 조건 매칭이다. 그래프별로 `resolveOptions`가 다르게 들어가는데, 핵심은 이 한 줄이다.
 
@@ -375,7 +375,7 @@ if ty.should_use_react_server_condition() {
 }
 ```
 
-같은 `'next-intl/server'` 문자열이 rsc 컨텍스트에서는 `react-server` 조건이 맞아 진짜 구현으로 들어갔고, ssr과 client 컨텍스트에서는 조건이 안맞기에 `default`인 stub으로 들어간다. 이게 빌드 타임에 끝나버리니 런타임의 `typeof window`는 이미 번들에 박힌 파일을 되돌릴 수 없는 것이다.
+같은 `'next-intl/server'` 문자열이 rsc 컨텍스트에서는 `react-server` 조건이 맞아 진짜 구현으로 들어갔고, ssr과 client 컨텍스트에서는 조건이 안맞기에 `default`인 stub으로 들어간다. 이것도 빌드 타임에 끝난다. 그리고 `typeof window` 치환도 아까 말했듯 빌드 타임이다. 둘 다 같은 빌드에서 결정되는데 축이 다르다. resolve는 rsc냐 ssr, client냐로 파일을 고르고, `typeof window`는 서버냐 브라우저냐로 값을 넣는다. 그래서 ssr 청크에는 `isServer`가 `true`로 박힌 분기와, 그 분기 안에서 import된 stub 파일이 같이 들어가 있다. 내 분기는 서버 쪽을 탔고, 그 안에 있던 게 stub이었던 것이다.
 
 ### 빌드가 끝나면 남는 것
 
@@ -471,6 +471,10 @@ export const whereAmI = () => 'REAL: react-server graph'
 | client | 없음           | `browser`   |
 
 ~~react-server는 React가 정한 조건이고 node/browser는 Node.js 표준 조건이다.~~ `node`는 Node.js가 직접 구현한 조건이지만, `browser`는 [Node.js 표준](https://nodejs.org/api/packages.html#community-conditions-definitions)이 아니다. 번들러들이 쓰기로 합의한 커뮤니티 조건이라 Node 문서에도 Community Conditions로 따로 적혀 있고, `react-server`도 마찬가지다. 조건을 실제로 매칭하는 건 Node가 아니라 Turbopack이고, Turbopack이 ssr 그래프에는 `node`를(`crates/next-core/src/util.rs` 358행), 브라우저 그래프에는 `browser`를(`crates/next-core/src/next_client/context.rs` 190행) 넣어준다. 라이브러리는 Next의 세 그래프를 모르고 이 조건 이름들만 알고, Next가 그래프마다 조건 세트를 다르게 넘기는 것이다. `react-server` 축으로 나누면 ssr과 client는 같은 파일을 받고, `node`/`browser` 축으로 나누면 다른 파일을 받는다.
+
+그런데 여기서 궁금한 점이 생겼다. Node 표준도 아닌데 Next는 어떤 기준으로 이 이름들을 고르는 걸까? 많이 사용하는 인기순으로 고르는건가? 조건은 그냥 문자열이고, Turbopack은 그 문자열을 라이브러리 `exports`의 키와 대조할 뿐이다. 검증도 없어서 아무 이름이나 넣을 수 있고, 그 키를 가진 라이브러리가 없으면 아무 일도 안 일어난다. Next가 고를 수 있는 건 라이브러리들이 실제로 `exports`에 쓰고 있는 이름뿐이다. 그래서 알아봤더니 `browser`는 webpack 시절부터 번들러들이 브라우저 빌드에 써온 이름이라 라이브러리들이 그 키로 파일을 내놓고 있었고, `react-server`는 React 팀이 서버 컴포넌트를 설계하면서 정한 이름을 `next-intl` 같은 라이브러리가 따라간 것이다. Next는 그 관행을 그래프마다 골라서 넘겨주는 입장이었다.
+
+Next가 넣는 조건을 전부 모으면 다섯 종류였다. 모드에 따라 `development`/`production`, 런타임에 따라 `node`/`edge-light`, 브라우저 그래프에 `browser`, rsc 그래프에 `react-server`, 그리고 `cacheComponents`를 켰을 때만 들어가는 `next-js`. 마지막 하나만 Next가 직접 만든 이름이고 나머지는 전부 기존 관행이다.
 
 네 번째 인자에서 본 `noServerCall`은 이 축을 Next가 import map으로 대신 골라준 경우다. ssr이 받는 파일에는 이 함수가 있고, 브라우저용 빌드(`client.browser.production.js`)에는 없다.
 
@@ -578,8 +582,10 @@ invalid_client_imports: vec![
 
 반면 `next-intl/server`는 이 중 어디에도 없다. 그래서 정적 import였어도 빌드가 잡아주지 않았을 것이고, 실험에서도 그대로였다. 하지만 `server-only`는 세 겹 다 있으니, 그걸 import하는 내 파일이 클라이언트 그래프에 들어오는 순간 빌드가 막아준다. `next-intl/server`를 검사 목록에 넣을 수는 없지만, 그걸 쓰는 파일을 목록에 들어가게 만들어줬다.
 
-사실 `next/headers`를 정적 import로만 바꿔도 그 파일은 클라이언트 그래프에서 빌드가 막힌다. 실험에서 본 게 그거다. 그런데 그건 그 파일에 `cookies()`가 있는 동안만 우연히 막히는 것이다. 나중에 쿠키 로직을 다른 곳으로 옮기면 보호는 조용히 사라지고 `next-intl/server`는 다시 ssr 그래프로 흘러들어간다. `server-only`는 안에 뭐가 있든 "이 파일은 서버 전용"이라고 선언하는 것이라, 파일이 어떻게 바뀌어도 경계가 유지되기에 도입했다.
+사실 `server-only` 없이 `next/headers`를 정적 import로만 바꿔도 `server.ts`는 클라이언트 그래프에서 빌드가 막힌다. 실험에서 본 게 그거다. 그런데 그 파일에는 `next-intl/server`도 같이 들어 있고, 빌드가 막아주는 건 `next/headers` 하나 때문이다. 나중에 쿠키 로직을 다른 파일로 옮겨 `next/headers`가 빠지면 막아줄 게 없어지고, 목록에 없는 `next-intl/server`는 아무 경고 없이 ssr 그래프로 또 흘러들어간다.
 
 ## 마무리
 
-처음엔 `typeof window` 한 줄을 고치면 끝날 줄 알았는데, 그 한 줄이 왜 틀린 질문인지를 설명하려면 빌드 그래프부터 제대로 알아야했다. 정리해보자면 App Router의 빌드 그래프는 rsc, ssr, client 셋이고, SSR은 서버에서 돌지만 React 기준으로는 클라이언트 그래프다. 디렉티브가 없는 파일은 누가 import했느냐로 그래프가 정해지고, 라이브러리는 자기가 어느 그래프에 있는지 모른 채 `exports` 조건으로 선택지만 준다. 조건이 안 맞으면 `default`로 간다. 그래서 런타임 분기로는 이 경계를 가를 수 없고, 빌드 타임에 `server-only`로 선을 긋고 소비처가 명시적으로 고르게 하는 쪽을 택했다. 이렇게 주 3천건의 조용한 에러를 0건으로 만든 작업이 끝이났다. 1, 2편 다 근본적으로는 `use client` 아래로 끌려 들어간 파일이 ssr 그래프에서 다른 모습으로 컴파일되는 그 자리에서 난 것이었다. 하나는 `use server`가 고쳐 쓴 stub을 불러서, 하나는 `react-server` 조건이 빠지고 stub을 불러서였다. 두 글을 쓰고 나니 전체 흐름이 보이게됐다.
+![화이트보드에 정리한 전체 흐름. next build 단계, 그래프마다 하나씩 있는 ModuleAssetContext와 다섯 인자, use client 분기, 그래프별 resolve 조건, server-only의 세 겹 안전장치와 Next import map](../images/rendering-boundary/wrap-up-board.png)
+
+처음엔 `typeof window` 한 줄을 고치면 끝날 줄 알았는데, 그 한 줄이 왜 틀린 질문인지를 설명하려면 빌드 그래프부터 제대로 알아야했다. 화이트보드에 처음부터 끝까지 한 번 정리해봤다. 이를 다시 글로 정리해보자면 App Router의 빌드 그래프는 rsc, ssr, client 셋이고, SSR은 서버에서 돌지만 React 기준으로는 클라이언트 그래프다. 디렉티브가 없는 파일은 누가 import했느냐로 그래프가 정해지고, 라이브러리는 자기가 어느 그래프에 있는지 모른 채 `exports` 조건으로 선택지만 준다. 조건이 안 맞으면 `default`로 간다. 그래서 런타임 분기로는 이 경계를 가를 수 없고, 빌드 타임에 `server-only`로 선을 긋고 소비처가 명시적으로 고르게 하는 쪽을 택했다. 이렇게 주 3천건의 조용한 에러를 0건으로 만든 작업이 끝이났다. 1, 2편 다 근본적으로는 `use client` 아래로 끌려 들어간 파일이 ssr 그래프에서 다른 모습으로 컴파일되는 그 자리에서 난 것이었다. 하나는 `use server`가 고쳐 쓴 stub을 불러서, 하나는 `react-server` 조건이 빠지고 stub을 불러서였다. 두 글을 쓰고 나니 전체 흐름이 보이게됐다.
