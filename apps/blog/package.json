@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",
-    "@google-analytics/data": "^7.0.0",
+    "@google-analytics/data": "^7.3.0",
     "@panzoom/panzoom": "^4.6.2",
     "@react-three/fiber": "^9.8.1",
     "@stylexjs/stylex": "catalog:",
