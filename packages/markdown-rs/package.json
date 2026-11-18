@@ -37,7 +37,7 @@
     "remark-toc": "^9.0.0",
     "sharp": "catalog:",
     "unified": "catalog:",
-    "unist-util-visit": "^5.1.0",
+    "unist-util-visit": "^5.2.0",
     "vfile": "^6.0.3"
   }
 }
